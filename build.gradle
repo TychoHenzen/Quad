@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.4.3'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
+    id 'info.solidsoft.pitest' version '1.15.0'
 }
 
 group = 'com.quadExercise'
@@ -21,6 +23,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
@@ -28,4 +31,49 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    "com/quadexercise/quad/QuadApplication.class",
+                    "com/quadexercise/quad/idea/**"
+            ])
+        }))
+    }
+}
+
+// Add minimum coverage thresholds
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.80  // 80% minimum coverage
+            }
+        }
+    }
+}
+
+pitest {
+    junit5PluginVersion = '1.2.1'
+    targetClasses = ['com.quadexercise.quad.*']  // by default all classes
+    targetTests = ['com.quadexercise.quad.*']
+    threads = 4
+    outputFormats = ['HTML']
+    timestampedReports = false
+    mutators = ['STRONGER']  // Use stronger mutation operators
+    excludedClasses = [
+            'com.quadexercise.quad.QuadApplication',
+            'com.quadexercise.quad.idea.*'
+    ]
+    coverageThreshold = 80
+    mutationThreshold = 80
 }

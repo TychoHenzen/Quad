@@ -10,7 +10,8 @@ import java.util.function.Supplier;
 
 @Service
 public class TriviaService {
-    private static final long RATE_LIMIT_MS = 5000L;
+    public static final long RATE_LIMIT_MS = 5000L;
+    private static final long NS_PER_MS = 1_000_000L;
     private final RestTemplate _restTemplate;
     private long _lastRequestTime;
 
@@ -41,20 +42,32 @@ public class TriviaService {
         );
     }
 
-    private synchronized <T> T rateLimit(Supplier<T> operation) throws InterruptedException {
-        long currentTime = System.currentTimeMillis();
-        while (RATE_LIMIT_MS > currentTime - _lastRequestTime) {
-            currentTime = System.currentTimeMillis();
-            long remainingWait = RATE_LIMIT_MS - (currentTime - _lastRequestTime);
-            if (0L < remainingWait) {
-                wait(remainingWait);
-            }
-        }
+    private <T> T rateLimit(Supplier<T> operation) throws InterruptedException {
+        Thread currentThread = Thread.currentThread();
 
-        try {
-            return operation.get();
-        } finally {
-            _lastRequestTime = System.currentTimeMillis();
+        synchronized (this) {
+            long startWait = System.nanoTime();
+            long elapsed = startWait - _lastRequestTime;
+
+            long timeToWait = RATE_LIMIT_MS - (elapsed) / NS_PER_MS;
+
+            while (0L < timeToWait) {
+                long waitStartTime = System.nanoTime();
+                wait(timeToWait);
+                long actualWaitNanos = System.nanoTime() - waitStartTime;
+                timeToWait -= actualWaitNanos / NS_PER_MS;
+
+                if (Thread.interrupted()) {
+                    currentThread.interrupt();
+                    throw new IllegalStateException("Rate limit wait interrupted");
+                }
+            }
+
+            try {
+                return operation.get();
+            } finally {
+                _lastRequestTime = System.nanoTime() / NS_PER_MS;
+            }
         }
     }
 }

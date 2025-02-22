@@ -1,5 +1,6 @@
 package com.quadexercise.quad.service;
 
+import com.quadexercise.quad.interfaces.InterruptibleRunnable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -9,6 +10,9 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.CompletableFuture;
+
+import static com.quadexercise.quad.service.TriviaService.RATE_LIMIT_MS;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,12 +28,30 @@ class TriviaServiceTest {
     private RestTemplateBuilder _restTemplateBuilder;
 
     private TriviaService _triviaService;
+    private static final long SMALL_DELAY_MS = 100L;
 
     @BeforeEach
     void setUp() {
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
         _triviaService = new TriviaService(_restTemplateBuilder);
     }
+
+    private static void waitUntilRateLimitExpires() throws InterruptedException {
+        long exactLimit = System.currentTimeMillis() + RATE_LIMIT_MS;
+        long current = 0L;
+        while (current < exactLimit) {
+            Thread.sleep(1L);
+            current = System.currentTimeMillis();
+        }
+    }
+
+
+    private static long measureExecutionTime(InterruptibleRunnable action) throws InterruptedException {
+        long start = System.currentTimeMillis();
+        action.run();
+        return System.currentTimeMillis() - start;
+    }
+
 
     @Test
     void testGetTrivia_ShouldReturnData() throws InterruptedException {
@@ -53,18 +75,18 @@ class TriviaServiceTest {
                 .thenReturn("{}");
 
         // Act
-        long startTime = System.currentTimeMillis();
-        _triviaService.getTrivia(1);
-        _triviaService.getTrivia(1);
-        long endTime = System.currentTimeMillis();
+        long duration = measureExecutionTime(() ->
+        {
+            _triviaService.getTrivia(1);
+            _triviaService.getTrivia(1);
+        });
 
         // Assert
         final long minTimeout = 5000L;
         final long maxTimeout = 5500L;
-        long timeDifference = endTime - startTime;
-        assertTrue(minTimeout <= timeDifference,
+        assertTrue(minTimeout <= duration,
                 "Second request should be delayed by at least 5 seconds");
-        assertTrue(maxTimeout >= timeDifference,
+        assertTrue(maxTimeout >= duration,
                 "Second request should not be delayed more than necessary");
     }
 
@@ -83,17 +105,14 @@ class TriviaServiceTest {
         Thread.sleep(halfTimeout);
 
         // Act
-        long startTime = System.currentTimeMillis();
-        _triviaService.getTrivia(1);
-        long endTime = System.currentTimeMillis();
+        long duration = measureExecutionTime(() -> _triviaService.getTrivia(1));
 
         // Assert
-        long timeDifference = endTime - startTime;
         // Should wait ~2 seconds (5 second limit - 3 seconds elapsed)
         final long minTimeout = 1800L;
         final long maxTimeout = 2200L;
-        assertTrue(minTimeout <= timeDifference && maxTimeout >= timeDifference,
-                "Wait time should be approximately 2 seconds, was: " + timeDifference + " ms");
+        assertTrue(minTimeout <= duration && maxTimeout >= duration,
+                "Wait time should be approximately 2 seconds, was: " + duration + " ms");
     }
 
     @Test
@@ -146,5 +165,77 @@ class TriviaServiceTest {
                 "Should throw exception for negative amounts");
         assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(0),
                 "Should throw exception for zero amount");
+    }
+
+    @Test
+    void testWaitBehavior() throws InterruptedException {
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn("{}");
+
+        _triviaService.getTrivia(1);
+
+        long startTime = System.currentTimeMillis();
+        CompletableFuture.runAsync(() -> assertDoesNotThrow(() -> _triviaService.getTrivia(1)));
+
+        final long halfTimeout = RATE_LIMIT_MS / 2L;
+        Thread.sleep(halfTimeout);
+        long midTime = System.currentTimeMillis() - startTime;
+        assertTrue(halfTimeout <= midTime, "Should still be waiting at halfway point");
+    }
+
+    @Test
+    void testRateLimit_ExactBoundaryConditions() throws InterruptedException {
+        // Arrange
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn("{}");
+        _triviaService.getTrivia(1);
+        waitUntilRateLimitExpires();
+
+        // Act
+        long duration = measureExecutionTime(() -> _triviaService.getTrivia(1));
+
+        // Assert
+        assertTrue(SMALL_DELAY_MS > duration, "Should not wait when exactly at rate limit");
+    }
+
+    @Test
+    void testRateLimit_EnforcesMinimumWait() throws InterruptedException {
+        // Arrange
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn("{}");
+        _triviaService.getTrivia(1);
+
+        // Act
+        long duration = measureExecutionTime(() -> _triviaService.getTrivia(1));
+
+        // Assert
+        assertTrue(RATE_LIMIT_MS <= duration,
+                "Should wait at least RATE_LIMIT_MS milliseconds");
+        assertTrue(RATE_LIMIT_MS + SMALL_DELAY_MS > duration,
+                "Should not wait significantly longer than RATE_LIMIT_MS");
+    }
+
+
+    @Test
+    void testRateLimit_HandlesInterruption() {
+        // Arrange
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn("{}");
+        Thread testThread = new Thread(() -> {
+            try {
+                _triviaService.getTrivia(1);
+                _triviaService.getTrivia(1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        // Act
+        testThread.start();
+        testThread.interrupt();
+
+        // Assert
+        assertThrows(IllegalStateException.class,
+                () -> testThread.join(RATE_LIMIT_MS + SMALL_DELAY_MS));
     }
 }

@@ -15,6 +15,16 @@ public class TriviaController {
         _triviaService = triviaService;
     }
 
+    private static ResponseEntity<String> createUnavailableResponse() {
+        return ResponseEntity.status(Errors.ERR_UNAVAILABLE)
+                .body("{\"error\": \"Service temporarily unavailable\"}");
+    }
+
+    private static ResponseEntity<String> createErrorResponse() {
+        return ResponseEntity.internalServerError()
+                .body("{\"error\": \"Failed to fetch trivia\"}");
+    }
+
     @GetMapping(value = "/test", produces = MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8")
     public ResponseEntity<String> testTrivia() {
         try {
@@ -22,11 +32,9 @@ public class TriviaController {
             return ResponseEntity.ok(response);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return ResponseEntity.status(Errors.ERR_UNAVAILABLE)
-                    .body("{\"error\": \"Service temporarily unavailable\"}");
+            return createUnavailableResponse();
         } catch (RuntimeException e) {
-            return ResponseEntity.internalServerError()
-                    .body("{\"error\": \"Failed to fetch trivia\"}");
+            return createErrorResponse();
         }
     }
 }

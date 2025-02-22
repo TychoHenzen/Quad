@@ -56,7 +56,7 @@ jacocoTestCoverageVerification {
     violationRules {
         rule {
             limit {
-                minimum = 0.80  // 80% minimum coverage
+                minimum = 0.80
             }
         }
     }
@@ -64,12 +64,12 @@ jacocoTestCoverageVerification {
 
 pitest {
     junit5PluginVersion = '1.2.1'
-    targetClasses = ['com.quadexercise.quad.*']  // by default all classes
+    targetClasses = ['com.quadexercise.quad.*']
     targetTests = ['com.quadexercise.quad.*']
     threads = 4
     outputFormats = ['HTML']
     timestampedReports = false
-    mutators = ['STRONGER']  // Use stronger mutation operators
+    mutators = ['STRONGER']
     excludedClasses = [
             'com.quadexercise.quad.QuadApplication',
             'com.quadexercise.quad.idea.*'

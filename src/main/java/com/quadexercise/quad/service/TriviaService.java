@@ -1,48 +1,60 @@
 package com.quadexercise.quad.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
+
+import java.util.function.Supplier;
 
 @Service
 public class TriviaService {
-    private final RestTemplate restTemplate;
-
-    private static final long RATE_LIMIT_MS = 5000; 
-    private long lastRequestTime = 0;
+    private static final long RATE_LIMIT_MS = 5000L;
+    private final RestTemplate _restTemplate;
+    private long _lastRequestTime;
 
     @Autowired
     public TriviaService(RestTemplateBuilder restTemplateBuilder) {
-        this.restTemplate = restTemplateBuilder.build();
+        _restTemplate = restTemplateBuilder.build();
     }
+
     public synchronized String getTrivia(int amount) throws InterruptedException {
-        if (amount <= 0) {
+        if (0 >= amount) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
 
-        while (System.currentTimeMillis() - lastRequestTime < RATE_LIMIT_MS) {
-            long remainingWait = RATE_LIMIT_MS - (System.currentTimeMillis() - lastRequestTime);
-            if (remainingWait > 0) {
+        return rateLimit(() -> fetchTrivia(amount));
+    }
+
+    private String fetchTrivia(int amount) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+                .newInstance()
+                .scheme("https")
+                .host("opentdb.com")
+                .path("/api.php")
+                .queryParam("amount", amount);
+
+        return _restTemplate.getForObject(
+                builder.toUriString(),
+                String.class
+        );
+    }
+
+    private synchronized <T> T rateLimit(Supplier<T> operation) throws InterruptedException {
+        long currentTime = System.currentTimeMillis();
+        while (RATE_LIMIT_MS > currentTime - _lastRequestTime) {
+            currentTime = System.currentTimeMillis();
+            long remainingWait = RATE_LIMIT_MS - (currentTime - _lastRequestTime);
+            if (0L < remainingWait) {
                 wait(remainingWait);
             }
         }
 
         try {
-            UriComponentsBuilder builder = UriComponentsBuilder
-                    .newInstance()
-                    .scheme("https")
-                    .host("opentdb.com")
-                    .path("/api.php")
-                    .queryParam("amount", amount);
-
-            return restTemplate.getForObject(
-                    builder.toUriString(),
-                    String.class
-            );
+            return operation.get();
         } finally {
-            lastRequestTime = System.currentTimeMillis();
+            _lastRequestTime = System.currentTimeMillis();
         }
     }
 }

@@ -8,136 +8,143 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceTest {
 
     @Mock
-    private RestTemplate restTemplate;
+    private RestTemplate _restTemplate;
 
     @Mock
-    private RestTemplateBuilder restTemplateBuilder;
+    private RestTemplateBuilder _restTemplateBuilder;
 
-    private TriviaService triviaService;
+    private TriviaService _triviaService;
 
     @BeforeEach
     void setUp() {
-        when(restTemplateBuilder.build()).thenReturn(restTemplate);
-        triviaService = new TriviaService(restTemplateBuilder);
+        when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
+        _triviaService = new TriviaService(_restTemplateBuilder);
     }
 
     @Test
-    void getTrivia_ShouldReturnData() throws InterruptedException {
+    void testGetTrivia_ShouldReturnData() throws InterruptedException {
         // Arrange
         String expectedResponse = "{\"response_code\":0,\"results\":[]}";
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(expectedResponse);
 
         // Act
-        String result = triviaService.getTrivia(1);
+        String result = _triviaService.getTrivia(1);
 
         // Assert
         assertEquals(expectedResponse, result);
-        verify(restTemplate).getForObject(anyString(), eq(String.class));
+        verify(_restTemplate).getForObject(anyString(), eq(String.class));
     }
 
     @Test
-    void getTrivia_ShouldRespectRateLimit() throws InterruptedException {
+    void testGetTrivia_ShouldRespectRateLimit() throws InterruptedException {
         // Arrange
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{}");
 
         // Act
         long startTime = System.currentTimeMillis();
-        triviaService.getTrivia(1);
-        triviaService.getTrivia(1);
+        _triviaService.getTrivia(1);
+        _triviaService.getTrivia(1);
         long endTime = System.currentTimeMillis();
 
         // Assert
+        final long minTimeout = 5000L;
+        final long maxTimeout = 5500L;
         long timeDifference = endTime - startTime;
-        assertTrue(timeDifference >= 5000,
+        assertTrue(minTimeout <= timeDifference,
                 "Second request should be delayed by at least 5 seconds");
-        assertTrue(timeDifference <= 5500,
+        assertTrue(maxTimeout >= timeDifference,
                 "Second request should not be delayed more than necessary");
     }
 
     @Test
-    void getTrivia_ShouldWaitCorrectAmount() throws InterruptedException {
+    void testGetTrivia_ShouldWaitCorrectAmount() throws InterruptedException {
         // Arrange
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{}");
 
         // First request to set lastRequestTime
-        triviaService.getTrivia(1);
+        _triviaService.getTrivia(1);
+
+        final long halfTimeout = 3000L;
 
         // Wait 3 seconds
-        wait(3000);
+        Thread.sleep(halfTimeout);
 
         // Act
         long startTime = System.currentTimeMillis();
-        triviaService.getTrivia(1);
+        _triviaService.getTrivia(1);
         long endTime = System.currentTimeMillis();
 
         // Assert
         long timeDifference = endTime - startTime;
         // Should wait ~2 seconds (5 second limit - 3 seconds elapsed)
-        assertTrue(timeDifference >= 1800 && timeDifference <= 2200,
-                "Wait time should be approximately 2 seconds, was: " + timeDifference + "ms");
+        final long minTimeout = 1800L;
+        final long maxTimeout = 2200L;
+        assertTrue(minTimeout <= timeDifference && maxTimeout >= timeDifference,
+                "Wait time should be approximately 2 seconds, was: " + timeDifference + " ms");
     }
 
     @Test
-    void getTrivia_ShouldHandleMultipleRequests() {
+    void testGetTrivia_ShouldHandleMultipleRequests() {
         // Arrange
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{}");
 
         // Act & Assert
         // This will take at least 10 seconds due to rate limiting
         assertDoesNotThrow(() -> {
-            for (int i = 0; i < 3; i++) {
-                triviaService.getTrivia(1);
+            for (int i = 0; 3 > i; i++) {
+                _triviaService.getTrivia(1);
             }
         });
 
-        verify(restTemplate, times(3))
+        verify(_restTemplate, times(3))
                 .getForObject(anyString(), eq(String.class));
     }
 
     @Test
-    void getTrivia_ShouldBuildCorrectUrl() throws InterruptedException {
+    void testGetTrivia_ShouldBuildCorrectUrl() throws InterruptedException {
         // Arrange
         String expectedUrl = "https://opentdb.com/api.php?amount=1";
-        when(restTemplate.getForObject(expectedUrl, eq(String.class)))
+        when(_restTemplate.getForObject(expectedUrl, String.class))
                 .thenReturn("{}");
 
         // Act
-        triviaService.getTrivia(1);
+        _triviaService.getTrivia(1);
 
         // Assert
-        
-        verify(restTemplate).getForObject(expectedUrl, eq(String.class));
+
+        verify(_restTemplate).getForObject(expectedUrl, String.class);
     }
 
     @Test
-    void getTrivia_ShouldHandleErrorResponses() {
+    void testGetTrivia_ShouldHandleErrorResponses() {
         // Arrange
-        when(restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenThrow(new RestClientException("API Error"));
 
         // Act & Assert
-        assertThrows(RestClientException.class, () -> triviaService.getTrivia(1));
+        assertThrows(RestClientException.class, () -> _triviaService.getTrivia(1));
     }
 
     @Test
-    void getTrivia_ShouldValidateInputAmount() {
+    void testGetTrivia_ShouldValidateInputAmount() {
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> triviaService.getTrivia(-1),
+        assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(-1),
                 "Should throw exception for negative amounts");
-        assertThrows(IllegalArgumentException.class, () -> triviaService.getTrivia(0),
+        assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(0),
                 "Should throw exception for zero amount");
     }
 }

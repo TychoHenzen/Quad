@@ -22,7 +22,7 @@ public class TriviaService {
     }
 
     public synchronized String getTrivia(int amount) {
-        if (0 >= amount) {
+        if (amount <= 0) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
 
@@ -49,12 +49,11 @@ public class TriviaService {
         synchronized (this) {
             long currentTime = System.currentTimeMillis();
             long elapsed = currentTime - _lastRequestTime;
-            long requiredWait = RATE_LIMIT_MS - elapsed;
+            long millisecondsToWait = RATE_LIMIT_MS - elapsed;
 
-            if (0L < requiredWait) {
-                waitForRateLimit(requiredWait, currentThread);
+            if (millisecondsToWait > 0L) {
+                waitForRateLimit(millisecondsToWait, currentThread);
             }
-
             try {
                 return operation.get();
             } finally {
@@ -63,11 +62,12 @@ public class TriviaService {
         }
     }
 
-    private synchronized void waitForRateLimit(long requiredWait, Thread currentThread) {
-        long remainingWait = requiredWait;
-        long waitStart = System.currentTimeMillis();
+    private synchronized void waitForRateLimit(long millisecondsToWait, Thread currentThread) {
 
-        while (0L < remainingWait) {
+        long waitEnd = System.currentTimeMillis() + millisecondsToWait;
+        long remainingWait = millisecondsToWait;
+
+        while (remainingWait > 0L) {
             try {
                 wait(remainingWait);
             } catch (InterruptedException e) {
@@ -75,12 +75,7 @@ public class TriviaService {
                 throw new IllegalStateException(RATE_LIMIT_INTERRUPTED_MESSAGE, e);
             }
 
-            if (Thread.interrupted()) {
-                currentThread.interrupt();
-                throw new IllegalStateException(RATE_LIMIT_INTERRUPTED_MESSAGE);
-            }
-
-            remainingWait = requiredWait - (System.currentTimeMillis() - waitStart);
+            remainingWait = waitEnd - System.currentTimeMillis();
         }
     }
 }

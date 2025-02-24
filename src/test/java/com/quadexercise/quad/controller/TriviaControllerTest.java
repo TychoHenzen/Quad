@@ -62,7 +62,7 @@ class TriviaControllerTest {
     @Test
     void testTrivia_ShouldHandleInterruption() throws Exception {
         // Arrange
-        when(_triviaService.getTrivia(1)).thenThrow(new InterruptedException("Test interrupt"));
+        when(_triviaService.getTrivia(1)).thenThrow(new IllegalStateException("Test interrupt"));
 
         // Act & Assert
         _mockMvc.perform(get("/test"))

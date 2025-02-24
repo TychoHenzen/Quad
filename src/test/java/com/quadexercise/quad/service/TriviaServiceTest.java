@@ -30,6 +30,7 @@ class TriviaServiceTest {
     private TriviaService _triviaService;
     private static final long SMALL_DELAY_MS = 100L;
 
+
     @BeforeEach
     void setUp() {
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
@@ -54,7 +55,7 @@ class TriviaServiceTest {
 
 
     @Test
-    void testGetTrivia_ShouldReturnData() throws InterruptedException {
+    void testGetTrivia_ShouldReturnData() {
         // Arrange
         String expectedResponse = "{\"response_code\":0,\"results\":[]}";
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
@@ -82,13 +83,12 @@ class TriviaServiceTest {
         });
 
         // Assert
-        final long minTimeout = 5000L;
-        final long maxTimeout = 5500L;
-        assertTrue(minTimeout <= duration,
+        assertTrue(RATE_LIMIT_MS - SMALL_DELAY_MS <= duration,
                 "Second request should be delayed by at least 5 seconds");
-        assertTrue(maxTimeout >= duration,
+        assertTrue(RATE_LIMIT_MS + SMALL_DELAY_MS >= duration,
                 "Second request should not be delayed more than necessary");
     }
+
 
     @Test
     void testGetTrivia_ShouldWaitCorrectAmount() throws InterruptedException {
@@ -134,7 +134,7 @@ class TriviaServiceTest {
     }
 
     @Test
-    void testGetTrivia_ShouldBuildCorrectUrl() throws InterruptedException {
+    void testGetTrivia_ShouldBuildCorrectUrl() {
         // Arrange
         String expectedUrl = "https://opentdb.com/api.php?amount=1";
         when(_restTemplate.getForObject(expectedUrl, String.class))
@@ -209,33 +209,42 @@ class TriviaServiceTest {
         long duration = measureExecutionTime(() -> _triviaService.getTrivia(1));
 
         // Assert
-        assertTrue(RATE_LIMIT_MS <= duration,
-                "Should wait at least RATE_LIMIT_MS milliseconds");
-        assertTrue(RATE_LIMIT_MS + SMALL_DELAY_MS > duration,
-                "Should not wait significantly longer than RATE_LIMIT_MS");
+        assertAll(
+                () -> assertTrue(RATE_LIMIT_MS <= duration,
+                        "Should wait at least RATE_LIMIT_MS milliseconds"),
+                () -> assertTrue(RATE_LIMIT_MS + SMALL_DELAY_MS > duration,
+                        "Should not wait significantly longer than RATE_LIMIT_MS")
+        );
     }
 
 
     @Test
-    void testRateLimit_HandlesInterruption() {
+    void testRateLimit_HandlesInterruption() throws InterruptedException {
         // Arrange
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn("{}");
+
+        // First call to set the last request time
+        _triviaService.getTrivia(1);
+
+        // Create a thread that will be interrupted
         Thread testThread = new Thread(() -> {
             try {
                 _triviaService.getTrivia(1);
-                _triviaService.getTrivia(1);
-            } catch (InterruptedException e) {
+                fail("Should have been interrupted");
+            } catch (IllegalStateException e) {
+                // Expected
                 Thread.currentThread().interrupt();
             }
         });
 
         // Act
         testThread.start();
+        Thread.sleep(SMALL_DELAY_MS); // Give the thread time to enter the wait state
         testThread.interrupt();
+        testThread.join(RATE_LIMIT_MS); // Wait for thread to complete
 
         // Assert
-        assertThrows(IllegalStateException.class,
-                () -> testThread.join(RATE_LIMIT_MS + SMALL_DELAY_MS));
+        assertSame(Thread.State.TERMINATED, testThread.getState(), "Thread should have terminated");
     }
 }

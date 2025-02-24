@@ -11,7 +11,8 @@ import java.util.function.Supplier;
 @Service
 public class TriviaService {
     public static final long RATE_LIMIT_MS = 5000L;
-    private static final long NS_PER_MS = 1_000_000L;
+    private static final String RATE_LIMIT_INTERRUPTED_MESSAGE = "Rate limit wait interrupted";
+
     private final RestTemplate _restTemplate;
     private long _lastRequestTime;
 
@@ -20,7 +21,7 @@ public class TriviaService {
         _restTemplate = restTemplateBuilder.build();
     }
 
-    public synchronized String getTrivia(int amount) throws InterruptedException {
+    public synchronized String getTrivia(int amount) {
         if (0 >= amount) {
             throw new IllegalArgumentException("Amount must be greater than 0");
         }
@@ -42,32 +43,44 @@ public class TriviaService {
         );
     }
 
-    private <T> T rateLimit(Supplier<T> operation) throws InterruptedException {
+    private <T> T rateLimit(Supplier<T> operation) {
         Thread currentThread = Thread.currentThread();
 
         synchronized (this) {
-            long startWait = System.nanoTime();
-            long elapsed = startWait - _lastRequestTime;
+            long currentTime = System.currentTimeMillis();
+            long elapsed = currentTime - _lastRequestTime;
+            long requiredWait = RATE_LIMIT_MS - elapsed;
 
-            long timeToWait = RATE_LIMIT_MS - (elapsed) / NS_PER_MS;
-
-            while (0L < timeToWait) {
-                long waitStartTime = System.nanoTime();
-                wait(timeToWait);
-                long actualWaitNanos = System.nanoTime() - waitStartTime;
-                timeToWait -= actualWaitNanos / NS_PER_MS;
-
-                if (Thread.interrupted()) {
-                    currentThread.interrupt();
-                    throw new IllegalStateException("Rate limit wait interrupted");
-                }
+            if (0L < requiredWait) {
+                waitForRateLimit(requiredWait, currentThread);
             }
 
             try {
                 return operation.get();
             } finally {
-                _lastRequestTime = System.nanoTime() / NS_PER_MS;
+                _lastRequestTime = System.currentTimeMillis();
             }
+        }
+    }
+
+    private synchronized void waitForRateLimit(long requiredWait, Thread currentThread) {
+        long remainingWait = requiredWait;
+        long waitStart = System.currentTimeMillis();
+
+        while (0L < remainingWait) {
+            try {
+                wait(remainingWait);
+            } catch (InterruptedException e) {
+                currentThread.interrupt();
+                throw new IllegalStateException(RATE_LIMIT_INTERRUPTED_MESSAGE, e);
+            }
+
+            if (Thread.interrupted()) {
+                currentThread.interrupt();
+                throw new IllegalStateException(RATE_LIMIT_INTERRUPTED_MESSAGE);
+            }
+
+            remainingWait = requiredWait - (System.currentTimeMillis() - waitStart);
         }
     }
 }

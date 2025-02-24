@@ -30,7 +30,7 @@ public class TriviaController {
         try {
             String response = _triviaService.getTrivia(1);
             return ResponseEntity.ok(response);
-        } catch (InterruptedException e) {
+        } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
             return createUnavailableResponse();
         } catch (RuntimeException e) {

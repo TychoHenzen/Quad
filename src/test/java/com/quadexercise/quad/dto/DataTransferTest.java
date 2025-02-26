@@ -32,8 +32,8 @@ class DataTransferTest {
         AnswerDTO answerDTO = new AnswerDTO();
 
         // Assert
-        assertEquals("", answerDTO.getQuestionId());
-        assertEquals("", answerDTO.getSelectedAnswer());
+        assertNull(answerDTO.getQuestionId());
+        assertNull(answerDTO.getSelectedAnswer());
     }
 
     @Test
@@ -61,9 +61,9 @@ class DataTransferTest {
         AnswerResultDTO resultDTO = new AnswerResultDTO();
 
         // Assert
-        assertEquals("", resultDTO.getQuestionId());
+        assertNull(resultDTO.getQuestionId());
         assertFalse(resultDTO.isCorrect());
-        assertEquals("", resultDTO.getCorrectAnswer());
+        assertNull(resultDTO.getCorrectAnswer());
     }
 
     @SuppressWarnings("DuplicateStringLiteralInspection")

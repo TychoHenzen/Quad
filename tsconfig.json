@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": true,
+    "sourceMap": true,
+    "outDir": "src/main/resources/static/js",
+    "rootDir": "src/main/typescript"
+  },
+  "include": [
+    "src/main/typescript/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

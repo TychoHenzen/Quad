@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en-US" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Trivia Challenge</title>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom styles -->
+    <link rel="stylesheet" th:href="@{/css/custom.css}">
+</head>
+<body class="bg-light">
+<div class="container py-5">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h1 class="text-primary text-center mb-4">Trivia Challenge</h1>
+
+            <form id="trivia-form">
+                <div class="mb-4 p-3 border rounded bg-white shadow-sm" th:each="question, questionStat : ${questions}">
+                    <input class="question-id" th:value="${question.id}" type="hidden">
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-secondary fst-italic" th:utext="${question.category}">Category</span>
+                        <span th:class="${'badge ' + 
+                        (question.difficulty.toLowerCase() == 'easy' ? 
+                            'bg-success' : 
+                            (question.difficulty.toLowerCase() == 'medium' ? 
+                                'bg-warning' : 
+                                'bg-danger'))}"
+                              th:utext="${question.difficulty}">Difficulty</span>
+                    </div>
+
+                    <div class="fw-bold mb-3 fs-5" th:utext="${question.question}">Question text</div>
+
+                    <div class="list-group">
+                        <label class="list-group-item list-group-item-action d-flex gap-2"
+                               th:each="answer, answerStat : ${question.answers}">
+                            <input class="form-check-input flex-shrink-0" required
+                                   th:id="${'q' + question.id + '-a' + answerStat.index}"
+                                   th:name="'question-' + ${question.id}"
+                                   th:value="${answer}"
+                                   type="radio">
+                            <span th:utext="${answer}">Answer text</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="alert alert-danger d-none mb-3" id="error-message">Please answer all questions before
+                    submitting.
+                </div>
+
+                <button class="btn btn-primary w-100 py-2 fw-semibold" id="submit-button" type="submit">Submit Answers
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS Bundle with Popper -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- App JS -->
+<script th:src="@{/js/trivia.js}"></script>
+</body>
+</html>

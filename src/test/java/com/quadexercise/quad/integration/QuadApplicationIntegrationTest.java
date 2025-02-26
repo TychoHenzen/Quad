@@ -33,10 +33,11 @@ class QuadApplicationIntegrationTest {
 
     @Test
     void testHomePage_ShouldLoadSuccessfully() throws Exception {
+        //noinspection DuplicateStringLiteralInspection
         _mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("home"))
-                .andExpect(content().string(containsString("Welcome to my Spring Application!")));
+                .andExpect(view().name("homeTemplate"))
+                .andExpect(content().string(containsString("Test your knowledge")));
     }
 
     @Test

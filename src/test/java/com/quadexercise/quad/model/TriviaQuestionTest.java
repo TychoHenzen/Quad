@@ -7,6 +7,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@SuppressWarnings("DuplicateStringLiteralInspection")
 class TriviaQuestionTest {
 
     private static final String CORRECT_ANSWER = "Paris";

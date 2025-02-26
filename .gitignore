@@ -172,3 +172,7 @@ gradle-app.setting
 *.hprof
 
 # End of https://www.toptal.com/developers/gitignore/api/gradle,java,jetbrains+all
+
+node_modules/
+package-lock.json
+src/main/resources/static/js

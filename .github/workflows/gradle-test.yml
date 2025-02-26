@@ -22,6 +22,19 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup TypeScript
+        run: npm install -g typescript
+
+      - name: Compile TypeScript
+        run: |
+          mkdir -p src/main/resources/static/js
+          tsc --project tsconfig.json
+
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2
 

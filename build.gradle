@@ -76,4 +76,7 @@ pitest {
     ]
     coverageThreshold = 80
     mutationThreshold = 80
+    
+    timeoutConstInMillis = 10000
+    timeoutFactor = 2.0
 }

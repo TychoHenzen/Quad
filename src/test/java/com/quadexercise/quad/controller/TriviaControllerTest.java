@@ -23,7 +23,6 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import static java.lang.Thread.interrupted;
@@ -42,6 +41,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class TriviaControllerTest {
 
+    private static final String ERROR_SERVICE_UNAVAILABLE = "{\"error\": \"Service temporarily unavailable\"}";
+    private static final String ERROR_FETCH_TRIVIA = "{\"error\": \"Failed to fetch trivia\"}";
+    private static final String ERROR_PARSING_DATA = "{\"error\": \"Error parsing trivia data from provider\"}";
+
     @Mock
     private TriviaService _triviaService;
 
@@ -50,6 +53,17 @@ class TriviaControllerTest {
 
     private MockMvc _mockMvc;
     private ObjectMapper _objectMapper;
+
+    private static List<AnswerDTO> createTestAnswers() {
+        List<AnswerDTO> answers = new ArrayList<>(0);
+        AnswerDTO answer = new AnswerDTO();
+        answer.setQuestionId("q1");
+        answer.setSelectedAnswer("Paris");
+        answers.add(answer);
+        return answers;
+    }
+
+    // Helper methods
 
     private static List<QuestionDTO> createMockQuestions() {
         QuestionDTO question1 = new QuestionDTO();
@@ -67,8 +81,18 @@ class TriviaControllerTest {
         return Arrays.asList(question1, question2);
     }
 
+    @BeforeEach
+    void setUp() {
+        _mockMvc = MockMvcBuilders
+                .standaloneSetup(_triviaController)
+                .build();
+        _objectMapper = new ObjectMapper();
+    }
+
+    // Test endpoint tests
+
     @Test
-    void testTrivia_ShouldReturnTriviaData() throws Exception {
+    void testTriviaEndpointReturnsData() throws Exception {
         // Arrange
         String expectedResponse = "{\"response_code\":0,\"results\":[]}";
         when(_triviaService.getTrivia(1)).thenReturn(expectedResponse);
@@ -80,41 +104,36 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testTrivia_ShouldHandleServiceError() throws Exception {
+    void testTriviaEndpointHandlesServiceError() throws Exception {
         // Arrange
         when(_triviaService.getTrivia(1)).thenThrow(new RuntimeException("Service Error"));
 
         // Act & Assert
         _mockMvc.perform(get("/test"))
                 .andExpect(status().isInternalServerError())
-                .andExpect(content().json("{\"error\": \"Failed to fetch trivia\"}"));
+                .andExpect(content().json(ERROR_FETCH_TRIVIA));
     }
 
     @Test
-    void testTrivia_ShouldHandleInterruption() throws Exception {
+    void testTriviaEndpointHandlesInterruption() throws Exception {
         // Arrange
         when(_triviaService.getTrivia(1)).thenThrow(new IllegalStateException("Test interrupt"));
 
         // Act & Assert
         _mockMvc.perform(get("/test"))
                 .andExpect(status().is(Errors.ERR_UNAVAILABLE))
-                .andExpect(content().json("{\"error\": \"Service temporarily unavailable\"}"));
+                .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
 
         // Verify thread interrupt status was set
         assertTrue(Thread.currentThread().isInterrupted());
-        assertTrue(interrupted()); // Clear interrupted status for other tests
+        // Clear interrupted status for other tests
+        assertTrue(interrupted());
     }
 
-    @BeforeEach
-    void setUp() {
-        _mockMvc = MockMvcBuilders
-                .standaloneSetup(_triviaController)
-                .build();
-        _objectMapper = new ObjectMapper();
-    }
+    // Questions endpoint tests
 
     @Test
-    void testGetQuestions_ShouldReturnQuestions() throws Exception {
+    void testGetQuestionsReturnsQuestionsList() throws Exception {
         // Arrange
         List<QuestionDTO> questions = createMockQuestions();
         when(_triviaService.getQuestions(5)).thenReturn(questions);
@@ -126,7 +145,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestions_WithCustomAmount() throws Exception {
+    void testGetQuestionsAcceptsCustomAmount() throws Exception {
         // Arrange
         List<QuestionDTO> questions = createMockQuestions();
         when(_triviaService.getQuestions(10)).thenReturn(questions);
@@ -137,24 +156,64 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestions_ShouldHandleParseException() throws Exception {
+    void testGetQuestionsHandlesParseException() throws Exception {
         // Arrange
         when(_triviaService.getQuestions(anyInt())).thenThrow(new TriviaParseException("Parse error"));
 
         // Act & Assert
         _mockMvc.perform(get("/questions"))
                 .andExpect(status().isBadGateway())
-                .andExpect(content().json("{\"error\": \"Error parsing trivia data from provider\"}"));
+                .andExpect(content().json(ERROR_PARSING_DATA));
     }
 
     @Test
-    void testCheckAnswers_ShouldReturnResults() throws Exception {
+    void testGetQuestionsHandlesRuntimeException() throws Exception {
         // Arrange
-        Collection<AnswerDTO> answers = new ArrayList<>(0);
-        AnswerDTO answer = new AnswerDTO();
-        answer.setQuestionId("q1");
-        answer.setSelectedAnswer("Paris");
-        answers.add(answer);
+        when(_triviaService.getQuestions(anyInt()))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        // Act & Assert
+        _mockMvc.perform(get("/questions"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().json(ERROR_FETCH_TRIVIA));
+    }
+
+    @Test
+    void testGetQuestionsHandlesInterruption() throws Exception {
+        // Arrange
+        when(_triviaService.getQuestions(anyInt()))
+                .thenThrow(new IllegalStateException("Interrupted"));
+
+        // Act & Assert
+        _mockMvc.perform(get("/questions"))
+                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
+                .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
+
+        // Check thread interrupt status
+        assertTrue(interrupted(), "Thread should be interrupted");
+    }
+
+    @Test
+    void testGetQuestionsDirectCall() {
+        // Arrange
+        List<QuestionDTO> mockQuestions = new ArrayList<>(0);
+        when(_triviaService.getQuestions(10)).thenReturn(mockQuestions);
+
+        // Act
+        ResponseEntity<Object> response = _triviaController.getQuestions(10);
+
+        // Assert
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(mockQuestions, response.getBody());
+        verify(_triviaService).getQuestions(10);
+    }
+
+    // Check answers endpoint tests
+
+    @Test
+    void testCheckAnswersReturnsResults() throws Exception {
+        // Arrange
+        List<AnswerDTO> answers = createTestAnswers();
 
         List<AnswerResultDTO> results = new ArrayList<>(0);
         AnswerResultDTO result = new AnswerResultDTO();
@@ -174,13 +233,10 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswers_ShouldHandleQuestionNotFoundException() throws Exception {
+    void testCheckAnswersHandlesQuestionNotFoundException() throws Exception {
         // Arrange
-        Collection<AnswerDTO> answers = new ArrayList<>(0);
-        AnswerDTO answer = new AnswerDTO();
-        answer.setQuestionId("invalid-id");
-        answer.setSelectedAnswer("Wrong Answer");
-        answers.add(answer);
+        List<AnswerDTO> answers = createTestAnswers();
+        answers.get(0).setQuestionId("invalid-id");
 
         when(_triviaService.checkAnswers(any()))
                 .thenThrow(new QuestionNotFoundException("invalid-id"));
@@ -194,13 +250,9 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswers_ShouldHandleTriviaServiceException() throws Exception {
+    void testCheckAnswersHandlesTriviaServiceException() throws Exception {
         // Arrange
-        Collection<AnswerDTO> answers = new ArrayList<>(0);
-        AnswerDTO answer = new AnswerDTO();
-        answer.setQuestionId("q1");
-        answer.setSelectedAnswer("Paris");
-        answers.add(answer);
+        List<AnswerDTO> answers = createTestAnswers();
 
         when(_triviaService.checkAnswers(any()))
                 .thenThrow(new TriviaServiceException("Service error"));
@@ -214,13 +266,44 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testDirectMethodCall_CheckAnswers() {
+    void testCheckAnswersHandlesInterruption() throws Exception {
         // Arrange
-        List<AnswerDTO> answers = new ArrayList<>(0);
-        AnswerDTO answer = new AnswerDTO();
-        answer.setQuestionId("q1");
-        answer.setSelectedAnswer("Paris");
-        answers.add(answer);
+        List<AnswerDTO> answers = createTestAnswers();
+
+        when(_triviaService.checkAnswers(any()))
+                .thenThrow(new IllegalStateException("Interrupted"));
+
+        // Act & Assert
+        _mockMvc.perform(post("/checkanswers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(_objectMapper.writeValueAsString(answers)))
+                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
+                .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
+
+        // Check thread interrupt status
+        assertTrue(interrupted(), "Thread should be interrupted");
+    }
+
+    @Test
+    void testCheckAnswersHandlesRuntimeException() throws Exception {
+        // Arrange
+        List<AnswerDTO> answers = createTestAnswers();
+
+        when(_triviaService.checkAnswers(any()))
+                .thenThrow(new RuntimeException("Unexpected error"));
+
+        // Act & Assert
+        _mockMvc.perform(post("/checkanswers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(_objectMapper.writeValueAsString(answers)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().json(ERROR_FETCH_TRIVIA));
+    }
+
+    @Test
+    void testCheckAnswersDirectCall() {
+        // Arrange
+        List<AnswerDTO> answers = createTestAnswers();
 
         List<AnswerResultDTO> results = new ArrayList<>(0);
         AnswerResultDTO result = new AnswerResultDTO();
@@ -238,47 +321,4 @@ class TriviaControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(results, response.getBody());
     }
-
-    @Test
-    void testGetQuestions_WithRuntimeException() throws Exception {
-        // Arrange
-        when(_triviaService.getQuestions(anyInt()))
-                .thenThrow(new RuntimeException("Unexpected error"));
-
-        // Act & Assert
-        _mockMvc.perform(get("/questions"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().json("{\"error\": \"Failed to fetch trivia\"}"));
-    }
-
-    @Test
-    void testGetQuestions_WithIllegalStateException() throws Exception {
-        // Arrange
-        when(_triviaService.getQuestions(anyInt()))
-                .thenThrow(new IllegalStateException("Interrupted"));
-
-        // Act & Assert
-        _mockMvc.perform(get("/questions"))
-                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
-                .andExpect(content().json("{\"error\": \"Service temporarily unavailable\"}"));
-
-        // Check thread interrupt status
-        assertTrue(interrupted(), "Thread should be interrupted");
-    }
-
-    @Test
-    void testDirectMethodCall_GetQuestions() {
-        // Arrange
-        List<QuestionDTO> mockQuestions = new ArrayList<>(0);
-        when(_triviaService.getQuestions(10)).thenReturn(mockQuestions);
-
-        // Act
-        ResponseEntity<Object> response = _triviaController.getQuestions(10);
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(mockQuestions, response.getBody());
-        verify(_triviaService).getQuestions(10);
-    }
-
 }

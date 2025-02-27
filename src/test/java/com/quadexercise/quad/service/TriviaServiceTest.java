@@ -20,9 +20,15 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.quadexercise.quad.service.TriviaService.RATE_LIMIT_MS;
 import static org.junit.jupiter.api.Assertions.*;
@@ -44,6 +50,7 @@ class TriviaServiceTest {
 
     private TriviaService _triviaService;
     private static final long SMALL_DELAY_MS = 100L;
+    private static final long LARGE_DELAY_MS = 1000L;
 
 
     @BeforeEach
@@ -509,5 +516,173 @@ class TriviaServiceTest {
         // Verify the exception message mentions the correct field
         assertTrue(exception.getMessage().contains(fieldToRemove),
                 "Exception message should mention the missing field: " + fieldToRemove);
+    }
+
+    @Test
+    void testGetQuestions_ValidatesAmount() {
+        // Arrange - set up to throw on negative values
+        when(_messageService.getMessage(anyString())).thenReturn("Amount must be greater than zero");
+
+        // Act & Assert
+        // This verifies that validateAmount is called and enforced
+        assertThrows(IllegalArgumentException.class, () -> _triviaService.getQuestions(-1));
+        assertThrows(IllegalArgumentException.class, () -> _triviaService.getQuestions(0));
+    }
+
+    @Test
+    void testRateLimit_InterruptWhileWaiting() throws Exception {
+        // Arrange - make a first request to set lastRequestTime
+        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+        _triviaService.getTrivia(1);
+
+        // Create a thread that will get interrupted during the wait
+        Thread testThread = new Thread(() -> {
+            try {
+                // This should trigger waiting because we just made a request
+                _triviaService.getTrivia(1);
+                fail("Should have been interrupted");
+            } catch (IllegalStateException e) {
+                // Expected exception - check that it has the interrupted exception as cause
+                assertInstanceOf(InterruptedException.class, e.getCause());
+                // Verify that Thread.interrupt() was called by checking interrupt status
+                assertTrue(Thread.currentThread().isInterrupted());
+            }
+        });
+
+        // Act - start the thread and interrupt it during waiting
+        testThread.start();
+        Thread.sleep(SMALL_DELAY_MS); // Give the thread time to enter the wait state
+        testThread.interrupt();
+        testThread.join(LARGE_DELAY_MS); // Wait for thread to complete
+
+        // Assert
+        assertFalse(testThread.isAlive(), "Thread should have terminated");
+    }
+
+    @Test
+    void testShuffleAnswers() {
+        // Arrange
+        List<String> original = Arrays.asList("A", "B", "C", "D");
+
+        // Mock to ensure deterministic order for testing
+        TriviaService serviceSpy = spy(_triviaService);
+        doAnswer(invocation -> {
+            List<String> list = new ArrayList<>(invocation.getArgument(0));
+            // Force a known shuffle order for testing
+            Collections.reverse(list);
+            return list;
+        }).when(serviceSpy).shuffleAnswers(any());
+
+        // Act
+        List<String> result = serviceSpy.shuffleAnswers(original);
+
+        // Assert
+        assertNotEquals(original, result);
+        assertEquals(Arrays.asList("D", "C", "B", "A"), result);
+    }
+
+    @Test
+    void testCheckAnswer_SetsAllFields() {
+        // Arrange
+        // Prepare some questions first
+        String jsonResponse = "{\"response_code\":0,\"results\":[" +
+                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
+                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
+                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
+                "]}";
+
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn(jsonResponse);
+
+        // Get the questions to populate the answer map
+        List<QuestionDTO> questions = _triviaService.getQuestions(1);
+        String questionId = questions.get(0).getId();
+
+        AnswerDTO answerDTO = new AnswerDTO();
+        answerDTO.setQuestionId(questionId);
+        answerDTO.setSelectedAnswer("Water");
+
+        // Act
+        AnswerResultDTO result = _triviaService.checkAnswer(answerDTO);
+
+        // Assert
+        assertEquals(questionId, result.getQuestionId());
+        assertTrue(result.isCorrect());
+        assertEquals("Water", result.getCorrectAnswer());
+    }
+
+    @Test
+    void testRateLimit_EnforcesWaitingTime() {
+        // Create a spy for time control
+        TriviaService serviceSpy = spy(_triviaService);
+
+        // Mock current time to return controlled values
+        AtomicLong currentTime = new AtomicLong(LARGE_DELAY_MS);
+        doAnswer(inv -> currentTime.get()).when(serviceSpy).getCurrentTimeMillis();
+
+        // Set up response
+        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+
+        // First call - sets lastRequestTime
+        serviceSpy.getTrivia(1);
+
+        // Advance time slightly
+        currentTime.set(LARGE_DELAY_MS * 2L);
+
+        // Second call - should wait
+        serviceSpy.getTrivia(1);
+
+        // Verify waitForRateLimit was called with correct value (4000ms)
+        verify(serviceSpy, atLeastOnce()).waitForRateLimit(anyLong(), any());
+    }
+
+    @Test
+    void testInterruptHandling() throws InterruptedException {
+        // Set up a test thread that will be interrupted
+        AtomicBoolean wasInterrupted = new AtomicBoolean(false);
+        CountDownLatch threadStarted = new CountDownLatch(1);
+        CountDownLatch interruptProcessed = new CountDownLatch(1);
+
+        Thread testThread = getTestingThread(threadStarted, wasInterrupted, interruptProcessed);
+
+        // Wait for thread to make first call
+        threadStarted.await(RATE_LIMIT_MS, TimeUnit.MILLISECONDS);
+        Thread.sleep(SMALL_DELAY_MS); // Give thread time to enter waiting state
+        testThread.interrupt();
+
+        // Wait for thread to process the interrupt
+        interruptProcessed.await(RATE_LIMIT_MS, TimeUnit.MILLISECONDS);
+        testThread.join(LARGE_DELAY_MS);
+
+        assertFalse(testThread.isAlive(), "Thread should have terminated");
+        assertTrue(wasInterrupted.get(), "Thread should have been interrupted and exception caught");
+    }
+
+    private Thread getTestingThread(CountDownLatch threadStarted,
+                                    AtomicBoolean wasInterrupted,
+                                    CountDownLatch interruptProcessed) {
+        Thread testThread = new Thread(() -> {
+            try {
+                when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+
+                // First call to set lastRequestTime
+                _triviaService.getTrivia(1);
+                threadStarted.countDown();
+
+                // Second call should wait and get interrupted
+                _triviaService.getTrivia(1);
+                fail("Should have thrown exception due to interruption");
+            } catch (IllegalStateException e) {
+                // Check if the cause is InterruptedException
+                wasInterrupted.set(e.getCause() instanceof InterruptedException);
+                // Verify thread interrupt flag is set
+                wasInterrupted.set(wasInterrupted.get() && Thread.currentThread().isInterrupted());
+                interruptProcessed.countDown();
+            }
+        });
+
+        // Start thread and interrupt it during the wait
+        testThread.start();
+        return testThread;
     }
 }

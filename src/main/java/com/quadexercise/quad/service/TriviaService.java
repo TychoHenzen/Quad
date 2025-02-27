@@ -58,6 +58,16 @@ public class TriviaService {
         validateField(node, "incorrect_answers");
     }
 
+    protected List<String> shuffleAnswers(List<String> answers) {
+        List<String> shuffled = new ArrayList<>(answers);
+        Collections.shuffle(shuffled);
+        return shuffled;
+    }
+
+    protected long getCurrentTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
     private String fetchTrivia(int amount) {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .newInstance()
@@ -134,7 +144,8 @@ public class TriviaService {
         // Add all answers and shuffle
         List<String> allAnswers = new ArrayList<>(incorrectAnswers);
         allAnswers.add(correctAnswer);
-        Collections.shuffle(allAnswers);
+        allAnswers = shuffleAnswers(allAnswers);
+
 
         questionDTO.setAnswers(allAnswers);
 
@@ -150,7 +161,7 @@ public class TriviaService {
                 .toList();
     }
 
-    private AnswerResultDTO checkAnswer(AnswerDTO answerDTO) {
+    AnswerResultDTO checkAnswer(AnswerDTO answerDTO) {
         String questionId = answerDTO.getQuestionId();
 
         // Get the correct answer
@@ -172,7 +183,7 @@ public class TriviaService {
         Thread currentThread = Thread.currentThread();
 
         synchronized (this) {
-            long currentTime = System.currentTimeMillis();
+            long currentTime = getCurrentTimeMillis();
             long elapsed = currentTime - _lastRequestTime;
             long millisecondsToWait = RATE_LIMIT_MS - elapsed;
 
@@ -182,12 +193,12 @@ public class TriviaService {
             try {
                 return operation.get();
             } finally {
-                _lastRequestTime = System.currentTimeMillis();
+                _lastRequestTime = getCurrentTimeMillis();
             }
         }
     }
 
-    private synchronized void waitForRateLimit(long millisecondsToWait, Thread currentThread) {
+    synchronized void waitForRateLimit(long millisecondsToWait, Thread currentThread) {
         long waitEnd = System.currentTimeMillis() + millisecondsToWait;
         long remainingWait = millisecondsToWait;
 
@@ -195,9 +206,15 @@ public class TriviaService {
             try {
                 wait(remainingWait);
             } catch (InterruptedException e) {
+                boolean wasInterrupted = Thread.interrupted();
                 currentThread.interrupt();
+                if (wasInterrupted) {
+                    throw new IllegalStateException(
+                            _messageService.getMessage("error.rate.limit.interrupted"), e);
+                }
                 throw new IllegalStateException(
-                        _messageService.getMessage("error.rate.limit.interrupted"), e);
+                        String.format("%s (Thread wasn't interrupted)",
+                                _messageService.getMessage("error.rate.limit.interrupted")), e);
             }
 
             remainingWait = waitEnd - System.currentTimeMillis();

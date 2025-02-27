@@ -16,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -25,6 +24,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class ViewControllerTest {
+    // Constants
+    private static final String HOME_PATH = "/";
+    private static final String PLAY_PATH = "/play";
+    private static final String RESULTS_PATH = "/results";
+    private static final String HOME_TEMPLATE = "homeTemplate";
+    private static final String TRIVIA_TEMPLATE = "triviaTemplate";
+    private static final String RESULTS_TEMPLATE = "resultsTemplate";
+    private static final String QUESTIONS_ATTR = "questions";
+    private static final int DEFAULT_QUESTION_AMOUNT = 5;
 
     @Mock
     private TriviaService _triviaService;
@@ -61,60 +69,67 @@ class ViewControllerTest {
     }
 
     @Test
-    void testHome_ShouldReturnHomePage() throws Exception {
-        _mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("homeTemplate"));
-    }
-
-    @Test
-    void testPlayTrivia_ShouldReturnTriviaPageWithQuestions() throws Exception {
+    void testHomeEndpointReturnsHomeTemplate() throws Exception {
         // Arrange
-        List<QuestionDTO> mockQuestions = createMockQuestions();
-        when(_triviaService.getQuestions(anyInt())).thenReturn(mockQuestions);
 
         // Act & Assert
-        _mockMvc.perform(get("/play").param("amount", "3"))
+        _mockMvc.perform(get(HOME_PATH))
                 .andExpect(status().isOk())
-                .andExpect(view().name("triviaTemplate"))
-                .andExpect(model().attributeExists("questions"))
-                .andExpect(model().attribute("questions", mockQuestions));
-
-        verify(_triviaService).getQuestions(3);
+                .andExpect(view().name(HOME_TEMPLATE));
     }
 
     @Test
-    void testPlayTrivia_WithDefaultAmount() throws Exception {
+    void testPlayEndpointReturnsPageWithQuestions() throws Exception {
         // Arrange
         List<QuestionDTO> mockQuestions = createMockQuestions();
-        when(_triviaService.getQuestions(5)).thenReturn(mockQuestions);
+        int customAmount = 3;
+        when(_triviaService.getQuestions(customAmount)).thenReturn(mockQuestions);
 
         // Act & Assert
-        _mockMvc.perform(get("/play"))
+        _mockMvc.perform(get(PLAY_PATH).param("amount", String.valueOf(customAmount)))
                 .andExpect(status().isOk())
-                .andExpect(view().name("triviaTemplate"));
+                .andExpect(view().name(TRIVIA_TEMPLATE))
+                .andExpect(model().attributeExists(QUESTIONS_ATTR))
+                .andExpect(model().attribute(QUESTIONS_ATTR, mockQuestions));
 
-        verify(_triviaService).getQuestions(5);
+        verify(_triviaService).getQuestions(customAmount);
     }
 
     @Test
-    void testResults_ShouldReturnResultsPage() throws Exception {
-        _mockMvc.perform(get("/results"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("resultsTemplate"));
-    }
-
-    @Test
-    void testDirectMethodCall_PlayTrivia() {
+    void testPlayEndpointUsesDefaultAmountWhenNotSpecified() throws Exception {
         // Arrange
         List<QuestionDTO> mockQuestions = createMockQuestions();
-        when(_triviaService.getQuestions(5)).thenReturn(mockQuestions);
+        when(_triviaService.getQuestions(DEFAULT_QUESTION_AMOUNT)).thenReturn(mockQuestions);
+
+        // Act & Assert
+        _mockMvc.perform(get(PLAY_PATH))
+                .andExpect(status().isOk())
+                .andExpect(view().name(TRIVIA_TEMPLATE));
+
+        verify(_triviaService).getQuestions(DEFAULT_QUESTION_AMOUNT);
+    }
+
+    @Test
+    void testResultsEndpointReturnsResultsTemplate() throws Exception {
+        // Arrange
+
+        // Act & Assert
+        _mockMvc.perform(get(RESULTS_PATH))
+                .andExpect(status().isOk())
+                .andExpect(view().name(RESULTS_TEMPLATE));
+    }
+
+    @Test
+    void testPlayTriviaMethodReturnsCorrectViewAndAddsQuestions() {
+        // Arrange
+        List<QuestionDTO> mockQuestions = createMockQuestions();
+        when(_triviaService.getQuestions(DEFAULT_QUESTION_AMOUNT)).thenReturn(mockQuestions);
 
         // Act
-        String viewName = _viewController.playTrivia(5, _model);
+        String viewName = _viewController.playTrivia(DEFAULT_QUESTION_AMOUNT, _model);
 
         // Assert
-        assertEquals("triviaTemplate", viewName);
-        verify(_model).addAttribute("questions", mockQuestions);
+        assertEquals(TRIVIA_TEMPLATE, viewName);
+        verify(_model).addAttribute(QUESTIONS_ATTR, mockQuestions);
     }
 }

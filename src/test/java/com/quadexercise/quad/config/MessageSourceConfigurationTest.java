@@ -1,37 +1,66 @@
 package com.quadexercise.quad.config;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.context.MessageSource;
 import org.springframework.context.NoSuchMessageException;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import java.util.Locale;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 class MessageSourceConfigurationTest {
 
     @Test
-    void testMessageSource() {
+    void testMessageSourceShouldBeConfiguredCorrectly() {
         // Arrange
         MessageSourceConfiguration configuration = new MessageSourceConfiguration();
 
         // Act
-        MessageSource messageSource = configuration.messageSource();
+        ResourceBundleMessageSource messageSource =
+                (ResourceBundleMessageSource) configuration.messageSource();
 
         // Assert
         assertNotNull(messageSource);
-        assertInstanceOf(ResourceBundleMessageSource.class, messageSource);
+    }
 
-        // We can't access protected methods directly, but we can test indirectly
-        // by checking the bean was created without errors
+    @Test
+    void testMessageSourceShouldUseCodeAsDefaultMessage() {
+        // Arrange
+        ResourceBundleMessageSource messageSource =
+                (ResourceBundleMessageSource) new MessageSourceConfiguration().messageSource();
+        messageSource.setUseCodeAsDefaultMessage(true);
 
-        // Test actual message resolution if possible
-        try {
-            String message = messageSource.getMessage("error.amount.greater.than.zero", null, null);
-            assertNotNull(message);
-        } catch (NoSuchMessageException e) {
-            // If resource bundle isn't available in test context, this is expected
-            assertInstanceOf(org.springframework.context.NoSuchMessageException.class, e);
-        }
+        // Act
+        String message = messageSource.getMessage("test.key", null, Locale.ENGLISH);
+
+        // Assert
+        assertEquals("test.key", message);
+    }
+
+    @Test
+    void testMessageSourceShouldThrowExceptionForMissingKeys() {
+        // Arrange
+        ResourceBundleMessageSource messageSource =
+                (ResourceBundleMessageSource) new MessageSourceConfiguration().messageSource();
+        messageSource.setUseCodeAsDefaultMessage(false);
+
+        // Act & Assert
+        assertThrows(NoSuchMessageException.class, () ->
+                messageSource.getMessage("nonexistent.key", null, Locale.ENGLISH));
+    }
+
+    @Test
+    void testMessageSourceShouldRespectBasenameChanges() {
+        // Arrange
+        ResourceBundleMessageSource messageSource =
+                (ResourceBundleMessageSource) new MessageSourceConfiguration().messageSource();
+        messageSource.setUseCodeAsDefaultMessage(true);
+
+        // Act
+        messageSource.setBasenames("non-existent-basename");
+        String message = messageSource.getMessage("test.key", null, Locale.ENGLISH);
+
+        // Assert
+        assertEquals("test.key", message);
     }
 }

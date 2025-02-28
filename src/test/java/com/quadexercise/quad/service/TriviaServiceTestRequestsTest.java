@@ -27,12 +27,17 @@ class TriviaServiceTestRequestsTest {
 
     private static final long SMALL_DELAY_MS = 100L;
     private static final long LARGE_DELAY_MS = 1000L;
+    private static final String EMPTY_JSON_RESPONSE = "{}";
+
     @Mock
     private RestTemplate _restTemplate;
+
     @Mock
     private RestTemplateBuilder _restTemplateBuilder;
+
     @Mock
     private MessageService _messageService;
+
     private TriviaService _triviaService;
 
     @BeforeEach
@@ -41,51 +46,50 @@ class TriviaServiceTestRequestsTest {
         _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
     }
 
-
     @Test
     void testGetTrivia_ShouldHandleMultipleRequests() {
         // Arrange
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn("{}");
+                .thenReturn(EMPTY_JSON_RESPONSE);
 
         // Act & Assert
-        // This will take at least 10 seconds due to rate limiting
+        // Due to rate limiting, this test will take time proportional to the number of calls
         assertDoesNotThrow(() -> {
-            for (int i = 0; 3 > i; i++) {
+            for (int i = 0; i < 3; i++) {
                 _triviaService.getTrivia(1);
             }
         });
 
+        // Verify exact number of calls
         verify(_restTemplate, times(3))
                 .getForObject(anyString(), eq(String.class));
     }
 
-
     @Test
-    void testWaitBehavior() throws InterruptedException {
+    void testRateLimit_ThreadWaitsAsExpected() throws InterruptedException {
+        // Arrange
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn("{}");
-
+                .thenReturn(EMPTY_JSON_RESPONSE);
         _triviaService.getTrivia(1);
 
+        // Act
         long startTime = System.currentTimeMillis();
         CompletableFuture.runAsync(() -> assertDoesNotThrow(() -> _triviaService.getTrivia(1)));
 
         final long halfTimeout = RATE_LIMIT_MS / 2L;
         Thread.sleep(halfTimeout);
+
+        // Assert
         long midTime = System.currentTimeMillis() - startTime;
         assertTrue(halfTimeout <= midTime, "Should still be waiting at halfway point");
     }
 
-
     @Test
-    void testGetQuestions_ShouldThrowTriviaParseException_WhenMissingRequiredFields() {
-        // We need to update the TriviaService to properly handle this case
-        // Let's test with completely malformed data instead
+    void testGetQuestions_ShouldThrowTriviaParseException_WhenMalformedResults() {
         // Arrange
-        String invalidResponse = "{\"response_code\":0,\"results\":[" +
-                "\"This is not a valid result object\"" +
-                "]}";
+        String invalidResponse = String.format(
+                "{\"response_code\":0,\"results\":[\"%s\"]}",
+                "This is not a valid result object");
 
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(invalidResponse);
@@ -93,7 +97,6 @@ class TriviaServiceTestRequestsTest {
         // Act & Assert
         assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
     }
-
 
     @Test
     void testCheckAnswers_ShouldThrowQuestionNotFoundException() {
@@ -104,21 +107,18 @@ class TriviaServiceTestRequestsTest {
         List<AnswerDTO> answers = List.of(answerDTO);
 
         // Act & Assert
-        assertThrows(QuestionNotFoundException.class, () -> _triviaService.checkAnswers(answers));
-    }
+        QuestionNotFoundException exception = assertThrows(
+                QuestionNotFoundException.class,
+                () -> _triviaService.checkAnswers(answers));
 
+        assertEquals("non-existent-id", exception.getQuestionId());
+    }
 
     @Test
     void testParseQuestionsFromResponse_InvalidJsonStructure() {
         // Arrange
         String invalidJson = "{\"response_code\":0,\"results\":\"not-an-array\"}";
-
-        // Reset mocks to clear any previous stubs
-        reset(_restTemplate, _messageService);
-
-        // Use lenient stubbing for both mocks
-        lenient().when(_messageService.getMessage(anyString())).thenReturn("Test message");
-        lenient().when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(invalidJson);
+        setupMocksForInvalidJson(invalidJson);
 
         // Act & Assert
         assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
@@ -137,28 +137,32 @@ class TriviaServiceTestRequestsTest {
 
     @Test
     void testValidateAmount_NegativeAmount() {
-        // Configure MessageService with lenient stubbing
-        lenient().when(_messageService.getMessage(anyString())).thenReturn("Amount must be greater than zero");
+        // Arrange
+        setupMessageServiceForAmountValidation();
 
-        // Act & Assert - test directly on getTrivia which calls validateAmount
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(-5));
+        // Act & Assert
+        Exception exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> _triviaService.getTrivia(-5));
+
         assertTrue(exception.getMessage().contains("greater than zero"));
     }
-
 
     @Test
     void testValidateAmount_ZeroAmount() {
-        // Configure MessageService with lenient stubbing
-        lenient().when(_messageService.getMessage(anyString())).thenReturn("Amount must be greater than zero");
+        // Arrange
+        setupMessageServiceForAmountValidation();
 
-        // Act & Assert - test directly on getTrivia which calls validateAmount
-        Exception exception = assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(0));
+        // Act & Assert
+        Exception exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> _triviaService.getTrivia(0));
+
         assertTrue(exception.getMessage().contains("greater than zero"));
     }
 
-
     @Test
-    void testGetTrivia_DirectMethod() {
+    void testGetTrivia_ReturnsExpectedResponse() {
         // Arrange
         String expectedResponse = "{\"response_code\":0,\"results\":[]}";
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
@@ -171,14 +175,12 @@ class TriviaServiceTestRequestsTest {
         assertEquals(expectedResponse, result);
     }
 
-
     @Test
-    void testGetQuestions_ValidatesAmount() {
-        // Arrange - set up to throw on negative values
-        when(_messageService.getMessage(anyString())).thenReturn("Amount must be greater than zero");
+    void testGetQuestions_ValidatesAmountParameter() {
+        // Arrange
+        setupMessageServiceForAmountValidation();
 
         // Act & Assert
-        // This verifies that validateAmount is called and enforced
         assertThrows(IllegalArgumentException.class, () -> _triviaService.getQuestions(-1));
         assertThrows(IllegalArgumentException.class, () -> _triviaService.getQuestions(0));
     }
@@ -186,22 +188,10 @@ class TriviaServiceTestRequestsTest {
     @Test
     void testRateLimit_InterruptWhileWaiting() throws Exception {
         // Arrange - make a first request to set lastRequestTime
-        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(EMPTY_JSON_RESPONSE);
         _triviaService.getTrivia(1);
 
-        // Create a thread that will get interrupted during the wait
-        Thread testThread = new Thread(() -> {
-            try {
-                // This should trigger waiting because we just made a request
-                _triviaService.getTrivia(1);
-                fail("Should have been interrupted");
-            } catch (IllegalStateException e) {
-                // Expected exception - check that it has the interrupted exception as cause
-                assertInstanceOf(InterruptedException.class, e.getCause());
-                // Verify that Thread.interrupt() was called by checking interrupt status
-                assertTrue(Thread.currentThread().isInterrupted());
-            }
-        });
+        Thread testThread = createThreadForInterruptionTest();
 
         // Act - start the thread and interrupt it during waiting
         testThread.start();
@@ -213,31 +203,52 @@ class TriviaServiceTestRequestsTest {
         assertFalse(testThread.isAlive(), "Thread should have terminated");
     }
 
-
     @Test
     void testRateLimit_EnforcesWaitingTime() {
-        // Create a spy for time control
+        // Arrange
         TriviaService serviceSpy = spy(_triviaService);
-
-        // Mock current time to return controlled values
         AtomicLong currentTime = new AtomicLong(LARGE_DELAY_MS);
         doAnswer(inv -> currentTime.get()).when(serviceSpy).getCurrentTimeMillis();
 
-        // Set up response
-        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(EMPTY_JSON_RESPONSE);
 
-        // First call - sets lastRequestTime
-        serviceSpy.getTrivia(1);
+        // Act
+        serviceSpy.getTrivia(1); // First call - sets lastRequestTime
+        currentTime.set(LARGE_DELAY_MS * 2L); // Advance time slightly
+        serviceSpy.getTrivia(1); // Second call - should wait
 
-        // Advance time slightly
-        currentTime.set(LARGE_DELAY_MS * 2L);
-
-        // Second call - should wait
-        serviceSpy.getTrivia(1);
-
-        // Verify waitForRateLimit was called with correct value (4000ms)
+        // Assert
         verify(serviceSpy, atLeastOnce()).waitForRateLimit(anyLong(), any());
     }
 
+    // Helper methods
 
+    private Thread createThreadForInterruptionTest() {
+        return new Thread(() -> {
+            try {
+                // This should trigger waiting because we just made a request
+                _triviaService.getTrivia(1);
+                fail("Should have been interrupted");
+            } catch (IllegalStateException e) {
+                // Expected exception - check that it has the interrupted exception as cause
+                assertInstanceOf(InterruptedException.class, e.getCause());
+                // Verify that Thread.interrupt() was called by checking interrupt status
+                assertTrue(Thread.currentThread().isInterrupted());
+            }
+        });
+    }
+
+    private void setupMessageServiceForAmountValidation() {
+        lenient().when(_messageService.getMessage(anyString()))
+                .thenReturn("Amount must be greater than zero");
+    }
+
+    private void setupMocksForInvalidJson(String invalidJson) {
+        // Reset mocks to clear any previous stubs
+        reset(_restTemplate, _messageService);
+
+        // Use lenient stubbing for both mocks
+        lenient().when(_messageService.getMessage(anyString())).thenReturn("Test message");
+        lenient().when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(invalidJson);
+    }
 }

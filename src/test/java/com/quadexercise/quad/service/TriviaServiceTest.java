@@ -9,23 +9,28 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceTest {
     @Mock
     private RestTemplate _restTemplate;
+
     @Mock
     private RestTemplateBuilder _restTemplateBuilder;
+
     @Mock
     private MessageService _messageService;
 
     private TriviaService _triviaService;
+
+    private static final String EXPECTED_API_URL = "https://opentdb.com/api.php?amount=1";
+    private static final String EMPTY_RESPONSE = "{\"response_code\":0,\"results\":[]}";
 
     @BeforeEach
     void setUp() {
@@ -36,33 +41,29 @@ class TriviaServiceTest {
     @Test
     void testGetTrivia_ShouldReturnData() {
         // Arrange
-        String expectedResponse = "{\"response_code\":0,\"results\":[]}";
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn(expectedResponse);
+                .thenReturn(EMPTY_RESPONSE);
 
         // Act
         String result = _triviaService.getTrivia(1);
 
         // Assert
-        assertEquals(expectedResponse, result);
+        assertEquals(EMPTY_RESPONSE, result);
         verify(_restTemplate).getForObject(anyString(), eq(String.class));
     }
 
     @Test
     void testGetTrivia_ShouldBuildCorrectUrl() {
         // Arrange
-        String expectedUrl = "https://opentdb.com/api.php?amount=1";
-        when(_restTemplate.getForObject(expectedUrl, String.class))
+        when(_restTemplate.getForObject(EXPECTED_API_URL, String.class))
                 .thenReturn("{}");
 
         // Act
         _triviaService.getTrivia(1);
 
         // Assert
-
-        verify(_restTemplate).getForObject(expectedUrl, String.class);
+        verify(_restTemplate).getForObject(EXPECTED_API_URL, String.class);
     }
-
 
     @Test
     void testGetTrivia_ShouldHandleErrorResponses() {
@@ -74,13 +75,26 @@ class TriviaServiceTest {
         assertThrows(RestClientException.class, () -> _triviaService.getTrivia(1));
     }
 
-
     @Test
     void testGetTrivia_ShouldValidateInputAmount() {
+        // Arrange
+        when(_messageService.getMessage(anyString()))
+                .thenReturn("Amount must be greater than zero");
+
         // Act & Assert
-        assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(-1),
-                "Should throw exception for negative amounts");
-        assertThrows(IllegalArgumentException.class, () -> _triviaService.getTrivia(0),
-                "Should throw exception for zero amount");
+        Exception negativeEx = assertThrows(
+                IllegalArgumentException.class,
+                () -> _triviaService.getTrivia(-1),
+                "Should throw exception for negative amounts"
+        );
+
+        Exception zeroEx = assertThrows(
+                IllegalArgumentException.class,
+                () -> _triviaService.getTrivia(0),
+                "Should throw exception for zero amount"
+        );
+
+        assertTrue(negativeEx.getMessage().contains("greater than zero"));
+        assertTrue(zeroEx.getMessage().contains("greater than zero"));
     }
 }

@@ -15,26 +15,28 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceQuestionParsingTest {
+
     @Mock
     private RestTemplate _restTemplate;
+
     @Mock
     private RestTemplateBuilder _restTemplateBuilder;
+
     @Mock
     private MessageService _messageService;
 
     private TriviaService _triviaService;
+    private ObjectMapper _objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
@@ -42,15 +44,18 @@ class TriviaServiceQuestionParsingTest {
         _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
     }
 
-    @Test
-    void testGetQuestions_ShouldReturnParsedQuestions() {
-        // Arrange
-        String jsonResponse = "{\"response_code\":0,\"results\":[" +
+    private static String getValidQuestionJson() {
+        return "{\"response_code\":0,\"results\":[" +
                 "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
                 "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
                 "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
                 "]}";
+    }
 
+    @Test
+    void testGetQuestionsFromValidJson_ShouldReturnParsedQuestions() {
+        // Arrange
+        String jsonResponse = getValidQuestionJson();
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(jsonResponse);
 
@@ -72,7 +77,7 @@ class TriviaServiceQuestionParsingTest {
     }
 
     @Test
-    void testGetQuestions_ShouldThrowTriviaParseException_WhenInvalidJson() {
+    void testParseInvalidJson_ShouldThrowTriviaParseException() {
         // Arrange
         String invalidJson = "{invalid-json";
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
@@ -82,29 +87,60 @@ class TriviaServiceQuestionParsingTest {
         assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"category", "type", "difficulty", "question", "correct_answer", "incorrect_answers"})
-    void testValidateResultNode_MissingRequiredFields(String fieldToRemove) throws JsonProcessingException {
+    @Test
+    void testParseMalformedResultObject_ShouldThrowTriviaParseException() {
         // Arrange
-        String baseJson = "{\"response_code\":0,\"results\":[" +
-                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
-                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
+        String invalidResponse = "{\"response_code\":0,\"results\":[" +
+                "\"This is not a valid result object\"" +
                 "]}";
 
-        // Parse the base JSON
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode rootNode = mapper.readTree(baseJson);
-        JsonNode resultNode = rootNode.get("results").get(0);
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn(invalidResponse);
 
-        // Create a modified version with the specified field removed
+        // Act & Assert
+        assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
+    }
+
+    @Test
+    void testParseNonArrayResults_ShouldThrowTriviaParseException() {
+        // Arrange
+        String invalidJson = "{\"response_code\":0,\"results\":\"not-an-array\"}";
+
+        // Use lenient stubbing for both mocks
+        lenient().when(_messageService.getMessage(anyString())).thenReturn("Test message");
+        lenient().when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(invalidJson);
+
+        // Act & Assert
+        assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
+    }
+
+    @Test
+    void testParseMissingResultsField_ShouldThrowTriviaParseException() {
+        // Arrange
+        String invalidJson = "{\"response_code\":0}"; // Missing results field
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
+                .thenReturn(invalidJson);
+
+        // Act & Assert
+        assertThrows(TriviaParseException.class, () -> _triviaService.getQuestions(1));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"category", "type", "difficulty", "question", "correct_answer", "incorrect_answers"})
+    void testValidateMissingRequiredFields_ShouldThrowTriviaParseException
+            (String fieldToRemove) throws JsonProcessingException {
+        // Arrange
+        String baseJson = getValidQuestionJson();
+
+        // Parse the base JSON and modify to remove specified field
+        JsonNode rootNode = _objectMapper.readTree(baseJson);
+        JsonNode resultNode = rootNode.get("results").get(0);
         ((com.fasterxml.jackson.databind.node.ObjectNode) resultNode).remove(fieldToRemove);
 
-        // Convert back to a JSON string
-        String modifiedJson = mapper.writeValueAsString(rootNode);
+        // Convert back to JSON string
+        String modifiedJson = _objectMapper.writeValueAsString(rootNode);
 
-        // Mock the REST response
-        lenient().when(_restTemplate.getForObject(anyString(), eq(String.class)))
+        when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(modifiedJson);
 
         // Act & Assert
@@ -114,28 +150,5 @@ class TriviaServiceQuestionParsingTest {
         // Verify the exception message mentions the correct field
         assertTrue(exception.getMessage().contains(fieldToRemove),
                 "Exception message should mention the missing field: " + fieldToRemove);
-    }
-
-
-    @Test
-    void testShuffleAnswers() {
-        // Arrange
-        List<String> original = Arrays.asList("A", "B", "C", "D");
-
-        // Mock to ensure deterministic order for testing
-        TriviaService serviceSpy = spy(_triviaService);
-        doAnswer(invocation -> {
-            List<String> list = new ArrayList<>(invocation.getArgument(0));
-            // Force a known shuffle order for testing
-            Collections.reverse(list);
-            return list;
-        }).when(serviceSpy).shuffleAnswers(any());
-
-        // Act
-        List<String> result = serviceSpy.shuffleAnswers(original);
-
-        // Assert
-        assertNotEquals(original, result);
-        assertEquals(Arrays.asList("D", "C", "B", "A"), result);
     }
 }

@@ -12,7 +12,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,141 +25,118 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceAnswerCheckingTest {
+
     @Mock
     private RestTemplate _restTemplate;
+
     @Mock
     private RestTemplateBuilder _restTemplateBuilder;
+
     @Mock
     private MessageService _messageService;
 
     private TriviaService _triviaService;
+    private static final String CORRECT_ANSWER = "Water";
+    private String _validQuestionId;
 
     @BeforeEach
     void setUp() {
+        // Arrange - Common setup for all tests
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
         _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
-    }
 
-    @Test
-    void testCheckAnswers_ShouldReturnCorrectResults() {
-        // Arrange - First get some questions to populate the answer map
+        // Set up test data for questions
         String jsonResponse = "{\"response_code\":0,\"results\":[" +
                 "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
+                "\"question\":\"What is H2O?\",\"correct_answer\":\"" + CORRECT_ANSWER + "\"," +
                 "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
                 "]}";
 
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
                 .thenReturn(jsonResponse);
 
+        // Load questions to populate internal answer map
         List<QuestionDTO> questions = _triviaService.getQuestions(1);
-        String questionId = questions.get(0).getId();
-
-        AnswerDTO correctAnswer = new AnswerDTO();
-        correctAnswer.setQuestionId(questionId);
-        correctAnswer.setSelectedAnswer("Water");
-
-        AnswerDTO incorrectAnswer = new AnswerDTO();
-        incorrectAnswer.setQuestionId(questionId);
-        incorrectAnswer.setSelectedAnswer("Oxygen");
-
-        // Act
-        List<AnswerResultDTO> correctResults = _triviaService.checkAnswers(List.of(correctAnswer));
-        List<AnswerResultDTO> incorrectResults = _triviaService.checkAnswers(List.of(incorrectAnswer));
-
-        // Assert
-        assertEquals(1, correctResults.size());
-        assertTrue(correctResults.get(0).isCorrect());
-        assertEquals("Water", correctResults.get(0).getCorrectAnswer());
-
-        assertEquals(1, incorrectResults.size());
-        assertFalse(incorrectResults.get(0).isCorrect());
-        assertEquals("Water", incorrectResults.get(0).getCorrectAnswer());
+        _validQuestionId = questions.get(0).getId();
     }
 
     @Test
-    void testCheckAnswers_ShouldThrowQuestionNotFoundException() {
+    void testCheckAnswer_SingleCorrectAnswer() {
         // Arrange
-        AnswerDTO answerDTO = new AnswerDTO();
-        answerDTO.setQuestionId("non-existent-id");
-        answerDTO.setSelectedAnswer("Some Answer");
-        List<AnswerDTO> answers = List.of(answerDTO);
+        AnswerDTO correctAnswer = new AnswerDTO();
+        correctAnswer.setQuestionId(_validQuestionId);
+        correctAnswer.setSelectedAnswer(CORRECT_ANSWER);
 
-        // Act & Assert
-        assertThrows(QuestionNotFoundException.class, () -> _triviaService.checkAnswers(answers));
+        // Act
+        AnswerResultDTO result = _triviaService.checkAnswer(correctAnswer);
+
+        // Assert
+        assertTrue(result.isCorrect());
+        assertEquals(CORRECT_ANSWER, result.getCorrectAnswer());
+        assertEquals(_validQuestionId, result.getQuestionId());
+    }
+
+    @Test
+    void testCheckAnswer_SingleIncorrectAnswer() {
+        // Arrange
+        AnswerDTO incorrectAnswer = new AnswerDTO();
+        incorrectAnswer.setQuestionId(_validQuestionId);
+        incorrectAnswer.setSelectedAnswer("Oxygen");
+
+        // Act
+        AnswerResultDTO result = _triviaService.checkAnswer(incorrectAnswer);
+
+        // Assert
+        assertFalse(result.isCorrect());
+        assertEquals(CORRECT_ANSWER, result.getCorrectAnswer());
+        assertEquals(_validQuestionId, result.getQuestionId());
+    }
+
+    @Test
+    void testCheckAnswers_MultipleAnswers() {
+        // Arrange
+        AnswerDTO correctAnswer = new AnswerDTO();
+        correctAnswer.setQuestionId(_validQuestionId);
+        correctAnswer.setSelectedAnswer(CORRECT_ANSWER);
+
+        AnswerDTO incorrectAnswer = new AnswerDTO();
+        incorrectAnswer.setQuestionId(_validQuestionId);
+        incorrectAnswer.setSelectedAnswer("Oxygen");
+
+        List<AnswerDTO> answers = Arrays.asList(correctAnswer, incorrectAnswer);
+
+        // Act
+        List<AnswerResultDTO> results = _triviaService.checkAnswers(answers);
+
+        // Assert
+        assertEquals(2, results.size());
+        assertTrue(results.get(0).isCorrect());
+        assertFalse(results.get(1).isCorrect());
+        assertEquals(CORRECT_ANSWER, results.get(0).getCorrectAnswer());
+        assertEquals(CORRECT_ANSWER, results.get(1).getCorrectAnswer());
     }
 
     @Test
     void testCheckAnswers_EmptyCollection() {
+        // Arrange
+        Collection<AnswerDTO> emptyList = new ArrayList<>(0);
+
         // Act
-        List<AnswerResultDTO> results = _triviaService.checkAnswers(List.of());
+        List<AnswerResultDTO> results = _triviaService.checkAnswers(emptyList);
 
         // Assert
         assertTrue(results.isEmpty());
     }
 
     @Test
-    void testCheckAnswers_MultipleAnswers() {
-        // Arrange - First get some questions to populate the answer map
-        String jsonResponse = "{\"response_code\":0,\"results\":[" +
-                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
-                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}," +
-                "{\"category\":\"History\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"Who was the first US President?\",\"correct_answer\":\"Washington\"," +
-                "\"incorrect_answers\":[\"Adams\",\"Jefferson\",\"Madison\"]}" +
-                "]}";
-
-        when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn(jsonResponse);
-
-        List<QuestionDTO> questions = _triviaService.getQuestions(2);
-
-        AnswerDTO answer1 = new AnswerDTO();
-        answer1.setQuestionId(questions.get(0).getId());
-        answer1.setSelectedAnswer("Water");
-
-        AnswerDTO answer2 = new AnswerDTO();
-        answer2.setQuestionId(questions.get(1).getId());
-        answer2.setSelectedAnswer("Adams"); // Incorrect
-
-        // Act
-        List<AnswerResultDTO> results = _triviaService.checkAnswers(Arrays.asList(answer1, answer2));
-
-        // Assert
-        assertEquals(2, results.size());
-        assertTrue(results.get(0).isCorrect());
-        assertFalse(results.get(1).isCorrect());
-        assertEquals("Washington", results.get(1).getCorrectAnswer());
-    }
-
-    @Test
-    void testCheckAnswer_SetsAllFields() {
+    void testCheckAnswers_InvalidQuestionId() {
         // Arrange
-        // Prepare some questions first
-        String jsonResponse = "{\"response_code\":0,\"results\":[" +
-                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
-                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
-                "]}";
-
-        when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn(jsonResponse);
-
-        // Get the questions to populate the answer map
-        List<QuestionDTO> questions = _triviaService.getQuestions(1);
-        String questionId = questions.get(0).getId();
-
-        AnswerDTO answerDTO = new AnswerDTO();
-        answerDTO.setQuestionId(questionId);
-        answerDTO.setSelectedAnswer("Water");
-
-        // Act
-        AnswerResultDTO result = _triviaService.checkAnswer(answerDTO);
-
-        // Assert
-        assertEquals(questionId, result.getQuestionId());
-        assertTrue(result.isCorrect());
-        assertEquals("Water", result.getCorrectAnswer());
+        AnswerDTO answerWithInvalidId = new AnswerDTO();
+        answerWithInvalidId.setQuestionId("non-existent-id");
+        answerWithInvalidId.setSelectedAnswer("Some Answer");
+        List<AnswerDTO> answers = List.of(answerWithInvalidId);
+        // Act & Assert
+        assertThrows(QuestionNotFoundException.class,
+                () -> _triviaService.checkAnswers(answers));
     }
 }

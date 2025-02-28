@@ -92,7 +92,7 @@ class TriviaControllerTest {
     // Test endpoint tests
 
     @Test
-    void testTriviaEndpointReturnsData() throws Exception {
+    void testTriviaEndpoint_ReturnsData() throws Exception {
         // Arrange
         String expectedResponse = "{\"response_code\":0,\"results\":[]}";
         when(_triviaService.getTrivia(1)).thenReturn(expectedResponse);
@@ -104,7 +104,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testTriviaEndpointHandlesServiceError() throws Exception {
+    void testTriviaEndpoint_HandlesServiceError() throws Exception {
         // Arrange
         when(_triviaService.getTrivia(1)).thenThrow(new RuntimeException("Service Error"));
 
@@ -115,7 +115,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testTriviaEndpointHandlesInterruption() throws Exception {
+    void testTriviaEndpoint_HandlesInterruption() throws Exception {
         // Arrange
         when(_triviaService.getTrivia(1)).thenThrow(new IllegalStateException("Test interrupt"));
 
@@ -133,7 +133,7 @@ class TriviaControllerTest {
     // Questions endpoint tests
 
     @Test
-    void testGetQuestionsReturnsQuestionsList() throws Exception {
+    void testGetQuestions_ReturnsQuestionsList() throws Exception {
         // Arrange
         List<QuestionDTO> questions = createMockQuestions();
         when(_triviaService.getQuestions(5)).thenReturn(questions);
@@ -145,7 +145,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestionsAcceptsCustomAmount() throws Exception {
+    void testGetQuestions_AcceptsCustomAmount() throws Exception {
         // Arrange
         List<QuestionDTO> questions = createMockQuestions();
         when(_triviaService.getQuestions(10)).thenReturn(questions);
@@ -156,7 +156,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestionsHandlesParseException() throws Exception {
+    void testGetQuestions_HandlesParseException() throws Exception {
         // Arrange
         when(_triviaService.getQuestions(anyInt())).thenThrow(new TriviaParseException("Parse error"));
 
@@ -167,7 +167,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestionsHandlesRuntimeException() throws Exception {
+    void testGetQuestions_HandlesRuntimeException() throws Exception {
         // Arrange
         when(_triviaService.getQuestions(anyInt()))
                 .thenThrow(new RuntimeException("Unexpected error"));
@@ -179,7 +179,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestionsHandlesInterruption() throws Exception {
+    void testGetQuestions_HandlesInterruption() throws Exception {
         // Arrange
         when(_triviaService.getQuestions(anyInt()))
                 .thenThrow(new IllegalStateException("Interrupted"));
@@ -194,7 +194,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testGetQuestionsDirectCall() {
+    void testGetQuestions_DirectCall() {
         // Arrange
         List<QuestionDTO> mockQuestions = new ArrayList<>(0);
         when(_triviaService.getQuestions(10)).thenReturn(mockQuestions);
@@ -211,7 +211,7 @@ class TriviaControllerTest {
     // Check answers endpoint tests
 
     @Test
-    void testCheckAnswersReturnsResults() throws Exception {
+    void testCheckAnswers_ReturnsResults() throws Exception {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
@@ -233,7 +233,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswersHandlesQuestionNotFoundException() throws Exception {
+    void testCheckAnswers_HandlesQuestionNotFoundException() throws Exception {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
         answers.get(0).setQuestionId("invalid-id");
@@ -250,7 +250,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswersHandlesTriviaServiceException() throws Exception {
+    void testCheckAnswers_HandlesTriviaServiceException() throws Exception {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
@@ -266,7 +266,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswersHandlesInterruption() throws Exception {
+    void testCheckAnswers_HandlesInterruption() throws Exception {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
@@ -285,7 +285,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswersHandlesRuntimeException() throws Exception {
+    void testCheckAnswers_HandlesRuntimeException() throws Exception {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
@@ -301,7 +301,7 @@ class TriviaControllerTest {
     }
 
     @Test
-    void testCheckAnswersDirectCall() {
+    void testCheckAnswers_DirectCall() {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 

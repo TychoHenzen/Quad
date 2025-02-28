@@ -17,34 +17,52 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = Application.class)
 @AutoConfigureMockMvc
+@SuppressWarnings("DuplicateStringLiteralInspection")
 class QuadApplicationIntegrationTest {
+
+    private static final String HOME_TEMPLATE_NAME = "homeTemplate";
+    private static final String HOME_EXPECTED_CONTENT = "Test your knowledge";
+    private static final String RESPONSE_CODE_KEY = "response_code";
+    private static final String TEXT_PLAIN_UTF8 = "text/plain;charset=UTF-8";
 
     @Autowired
     private MockMvc _mockMvc;
+
     @Autowired
     private ApplicationContext _applicationContext;
 
     @Test
-    void testContextLoads() {
+    void testContextLoadsVerifyRequiredBeans() {
+        // Arrange
+        // Spring context is autowired
+
+        // Act & Assert
         assertNotNull(_applicationContext, "Application context should not be null");
         assertNotNull(_applicationContext.getBean(TriviaService.class), "TriviaService should be loaded");
         assertNotNull(_applicationContext.getBean(TriviaController.class), "TriviaController should be loaded");
     }
 
     @Test
-    void testHomePage_ShouldLoadSuccessfully() throws Exception {
-        //noinspection DuplicateStringLiteralInspection
+    void testHomePageLoadsSuccessfully() throws Exception {
+        // Arrange
+        // MockMvc is autowired
+
+        // Act & Assert (combined in Spring MVC testing)
         _mockMvc.perform(get("/"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("homeTemplate"))
-                .andExpect(content().string(containsString("Test your knowledge")));
+                .andExpect(view().name(HOME_TEMPLATE_NAME))
+                .andExpect(content().string(containsString(HOME_EXPECTED_CONTENT)));
     }
 
     @Test
-    void testTriviaEndpoint_ShouldReturnValidJson() throws Exception {
+    void testTriviaEndpointReturnsValidJson() throws Exception {
+        // Arrange
+        // MockMvc is autowired
+
+        // Act & Assert (combined in Spring MVC testing)
         _mockMvc.perform(get("/test"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("text/plain;charset=UTF-8"))
-                .andExpect(content().string(containsString("response_code")));
+                .andExpect(content().contentType(TEXT_PLAIN_UTF8))
+                .andExpect(content().string(containsString(RESPONSE_CODE_KEY)));
     }
 }

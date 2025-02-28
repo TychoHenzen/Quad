@@ -5,26 +5,30 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-@SuppressWarnings("DuplicateStringLiteralInspection")
 class ExceptionTest {
+    // Constants for frequently used test values
+    private static final String TEST_QUESTION_ID = "test-id-123";
+    private static final String PARSE_ERROR_MESSAGE = "Error parsing trivia data";
+    private static final String SERVICE_ERROR_MESSAGE = "Service error occurred";
+    private static final String ORIGINAL_ERROR = "Original error";
 
     @Test
-    void testQuestionNotFoundException() {
+    void testQuestionNotFoundException_CreatesCorrectException() {
         // Arrange
-        String questionId = "test-id-123";
+        String questionId = TEST_QUESTION_ID;
 
         // Act
         QuestionNotFoundException exception = new QuestionNotFoundException(questionId);
 
         // Assert
         assertEquals(questionId, exception.getQuestionId());
-        assertEquals("Question ID not found: test-id-123", exception.getMessage());
+        assertEquals("Question ID not found: " + TEST_QUESTION_ID, exception.getMessage());
     }
 
     @Test
     void testTriviaParseException_WithMessage() {
         // Arrange
-        String errorMessage = "Error parsing trivia data";
+        String errorMessage = PARSE_ERROR_MESSAGE;
 
         // Act
         TriviaParseException exception = new TriviaParseException(errorMessage);
@@ -36,8 +40,8 @@ class ExceptionTest {
     @Test
     void testTriviaParseException_WithMessageAndCause() {
         // Arrange
-        String errorMessage = "Error parsing trivia data";
-        Throwable cause = new RuntimeException("Original error");
+        String errorMessage = PARSE_ERROR_MESSAGE;
+        Throwable cause = new RuntimeException(ORIGINAL_ERROR);
 
         // Act
         TriviaParseException exception = new TriviaParseException(errorMessage, cause);
@@ -50,7 +54,7 @@ class ExceptionTest {
     @Test
     void testTriviaServiceException_WithMessage() {
         // Arrange
-        String errorMessage = "Service error occurred";
+        String errorMessage = SERVICE_ERROR_MESSAGE;
 
         // Act
         TriviaServiceException exception = new TriviaServiceException(errorMessage);
@@ -62,8 +66,8 @@ class ExceptionTest {
     @Test
     void testTriviaServiceException_WithMessageAndCause() {
         // Arrange
-        String errorMessage = "Service error occurred";
-        Throwable cause = new RuntimeException("Original error");
+        String errorMessage = SERVICE_ERROR_MESSAGE;
+        Throwable cause = new RuntimeException(ORIGINAL_ERROR);
 
         // Act
         TriviaServiceException exception = new TriviaServiceException(errorMessage, cause);
@@ -74,10 +78,12 @@ class ExceptionTest {
     }
 
     @Test
-    void testExceptionHierarchy() {
+    void testExceptionHierarchy_VerifiesInheritance() {
         // Arrange
         QuestionNotFoundException qnfe = new QuestionNotFoundException("test-id");
         TriviaParseException tpe = new TriviaParseException("parse error");
+
+        // Act - in this case, we're just inspecting the class hierarchy
 
         // Assert - verify inheritance
         assertInstanceOf(TriviaServiceException.class, qnfe);

@@ -69,7 +69,7 @@ class ViewControllerTest {
     }
 
     @Test
-    void testHomeEndpointReturnsHomeTemplate() throws Exception {
+    void testHomeEndpoint_ReturnsHomeTemplate() throws Exception {
         // Arrange
 
         // Act & Assert
@@ -79,7 +79,7 @@ class ViewControllerTest {
     }
 
     @Test
-    void testPlayEndpointReturnsPageWithQuestions() throws Exception {
+    void testPlayEndpoint_ReturnsPageWithQuestions() throws Exception {
         // Arrange
         List<QuestionDTO> mockQuestions = createMockQuestions();
         int customAmount = 3;
@@ -96,7 +96,7 @@ class ViewControllerTest {
     }
 
     @Test
-    void testPlayEndpointUsesDefaultAmountWhenNotSpecified() throws Exception {
+    void testPlayEndpoint_UsesDefaultAmount_WhenNotSpecified() throws Exception {
         // Arrange
         List<QuestionDTO> mockQuestions = createMockQuestions();
         when(_triviaService.getQuestions(DEFAULT_QUESTION_AMOUNT)).thenReturn(mockQuestions);
@@ -110,7 +110,7 @@ class ViewControllerTest {
     }
 
     @Test
-    void testResultsEndpointReturnsResultsTemplate() throws Exception {
+    void testResultsEndpoint_ReturnsResultsTemplate() throws Exception {
         // Arrange
 
         // Act & Assert
@@ -120,7 +120,7 @@ class ViewControllerTest {
     }
 
     @Test
-    void testPlayTriviaMethodReturnsCorrectViewAndAddsQuestions() {
+    void testPlayTriviaMethod_ReturnsCorrectViewAndAddsQuestions() {
         // Arrange
         List<QuestionDTO> mockQuestions = createMockQuestions();
         when(_triviaService.getQuestions(DEFAULT_QUESTION_AMOUNT)).thenReturn(mockQuestions);

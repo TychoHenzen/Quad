@@ -19,6 +19,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTests {
 
+    private static final String TEST_KEY = "test.key";
+    private static final String TEST_KEY_WITH_ARGS = "test.key.with.args";
+    private static final String TEST_MESSAGE = "Test Message";
+    private static final String TEST_MESSAGE_WITH_ARGS = "Test Message with arg1 and arg2";
+
     @Mock
     private MessageSource _messageSource;
 
@@ -30,39 +35,33 @@ class MessageServiceTests {
     }
 
     @Test
-    void testGetMessage_ShouldUseCurrentLocale() {
+    void testGetMessageWithNoArguments() {
         // Arrange
-        String key = "test.key";
-        String expectedMessage = "Test Message";
         Locale currentLocale = LocaleContextHolder.getLocale();
-
-        when(_messageSource.getMessage(eq(key), any(), eq(currentLocale)))
-                .thenReturn(expectedMessage);
+        when(_messageSource.getMessage(eq(TEST_KEY), any(), eq(currentLocale)))
+                .thenReturn(TEST_MESSAGE);
 
         // Act
-        String result = _messageService.getMessage(key);
+        String result = _messageService.getMessage(TEST_KEY);
 
         // Assert
-        assertEquals(expectedMessage, result);
-        verify(_messageSource).getMessage(eq(key), any(), eq(currentLocale));
+        assertEquals(TEST_MESSAGE, result);
+        verify(_messageSource).getMessage(eq(TEST_KEY), any(), eq(currentLocale));
     }
 
     @Test
-    void testGetMessage_ShouldPassArgumentsToMessageSource() {
+    void testGetMessageWithArguments() {
         // Arrange
-        String key = "test.key.with.args";
-        String expectedMessage = "Test Message with arg1 and arg2";
         Object[] args = {"arg1", "arg2"};
         Locale currentLocale = LocaleContextHolder.getLocale();
-
-        when(_messageSource.getMessage(key, args, currentLocale))
-                .thenReturn(expectedMessage);
+        when(_messageSource.getMessage(TEST_KEY_WITH_ARGS, args, currentLocale))
+                .thenReturn(TEST_MESSAGE_WITH_ARGS);
 
         // Act
-        String result = _messageService.getMessage(key, args);
+        String result = _messageService.getMessage(TEST_KEY_WITH_ARGS, args);
 
         // Assert
-        assertEquals(expectedMessage, result);
-        verify(_messageSource).getMessage(key, args, currentLocale);
+        assertEquals(TEST_MESSAGE_WITH_ARGS, result);
+        verify(_messageSource).getMessage(TEST_KEY_WITH_ARGS, args, currentLocale);
     }
 }

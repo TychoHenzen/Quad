@@ -14,7 +14,7 @@ class TriviaQuestionTest {
     private static final String[] INCORRECT_ANSWERS = {"London", "Berlin", "Madrid"};
 
     @Test
-    void testTriviaQuestionGettersAndSetters() {
+    void testTriviaQuestion_GettersAndSetters() {
         // Arrange
         TriviaQuestion question = new TriviaQuestion();
         String category = "Science";
@@ -33,42 +33,44 @@ class TriviaQuestionTest {
         question.setIncorrectAnswers(incorrectAnswers);
 
         // Assert
-        assertEquals(category, question.getCategory());
-        assertEquals(type, question.getType());
-        assertEquals(difficulty, question.getDifficulty());
-        assertEquals(questionText, question.getQuestion());
-        assertEquals(correctAnswer, question.getCorrectAnswer());
-        assertEquals(incorrectAnswers, question.getIncorrectAnswers());
+        assertEquals(category, question.getCategory(), "Category getter should return the set value");
+        assertEquals(type, question.getType(), "Type getter should return the set value");
+        assertEquals(difficulty, question.getDifficulty(), "Difficulty getter should return the set value");
+        assertEquals(questionText, question.getQuestion(), "Question getter should return the set value");
+        assertEquals(correctAnswer, question.getCorrectAnswer(), "CorrectAnswer getter should return the set value");
+        assertEquals(incorrectAnswers, question.getIncorrectAnswers(),
+                "IncorrectAnswers getter should return the set value");
     }
 
     @Test
-    void testTriviaQuestionDefaultValues() {
+    void testTriviaQuestion_DefaultValues() {
         // Arrange
         TriviaQuestion question = new TriviaQuestion();
 
         // Assert
-        assertEquals("", question.getCategory());
-        assertEquals("", question.getType());
-        assertEquals("", question.getDifficulty());
-        assertEquals("", question.getQuestion());
-        assertEquals("", question.getCorrectAnswer());
-        String msg = "New TriviaQuestion should have empty incorrect answers list";
-        assertTrue(question.getIncorrectAnswers().isEmpty(), msg);
-        msg = "New TriviaQuestion should have exactly 0 incorrect answers";
-        assertEquals(0, question.getIncorrectAnswers().size(), msg);
+        assertEquals("", question.getCategory(), "Default category should be empty string");
+        assertEquals("", question.getType(), "Default type should be empty string");
+        assertEquals("", question.getDifficulty(), "Default difficulty should be empty string");
+        assertEquals("", question.getQuestion(), "Default question should be empty string");
+        assertEquals("", question.getCorrectAnswer(), "Default correctAnswer should be empty string");
+        assertTrue(question.getIncorrectAnswers().isEmpty(), "Default incorrectAnswers should be empty list");
+        assertEquals(0, question.getIncorrectAnswers().size(), "Default incorrectAnswers should have zero elements");
     }
 
     @Test
-    void testTriviaQuestionIncorrectValuesImmutable() {
+    void testTriviaQuestion_IncorrectAnswersImmutability() {
         // Arrange
         TriviaQuestion question = new TriviaQuestion();
         List<String> incorrectAnswers = Arrays.asList(INCORRECT_ANSWERS);
         question.setIncorrectAnswers(incorrectAnswers);
 
-        // Act & Assert
+        // Act
         List<String> returnedList = question.getIncorrectAnswers();
+
+        // Assert
         assertThrows(UnsupportedOperationException.class, () ->
-                returnedList.add(CORRECT_ANSWER)
+                        returnedList.add(CORRECT_ANSWER),
+                "Returned list should be immutable and throw exception when modified"
         );
     }
 }

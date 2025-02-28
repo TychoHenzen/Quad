@@ -7,11 +7,12 @@ import org.springframework.boot.SpringApplication;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
 
 class ApplicationTest {
 
     @Test
-    void testMain() {
+    void testMain_LaunchesSpringApplication() {
         try (MockedStatic<SpringApplication> applicationMock = mockStatic(SpringApplication.class)) {
             // Arrange
             applicationMock.when(() -> SpringApplication.run(eq(Application.class), any(String[].class)))
@@ -22,7 +23,10 @@ class ApplicationTest {
             Application.main(args);
 
             // Assert
-            applicationMock.verify(() -> SpringApplication.run(Application.class, args));
+            applicationMock.verify(
+                    () -> SpringApplication.run(Application.class, args),
+                    times(1)
+            );
         }
     }
 }

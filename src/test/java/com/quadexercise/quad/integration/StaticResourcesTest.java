@@ -20,22 +20,38 @@ class StaticResourcesTest {
     private MockMvc _mockMvc;
 
     @Test
-    void testCssResourcesAreAvailable() throws Exception {
-        _mockMvc.perform(get("/css/custom.css"))
+    void testCssResource_IsAvailableWithCorrectContentType() throws Exception {
+        // Arrange
+        String cssPath = "/css/custom.css";
+        String expectedContentType = "text/css";
+
+        // Act & Assert
+        _mockMvc.perform(get(cssPath))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("text/css"));
+                .andExpect(content().contentType(expectedContentType));
     }
 
     @Test
-    void testJsResourcesAreAvailable() throws Exception {
-        // Test trivia.js
-        _mockMvc.perform(get("/js/trivia.js"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType("text/javascript"));
+    void testTriviaJsResource_IsAvailableWithCorrectContentType() throws Exception {
+        // Arrange
+        String jsPath = "/js/trivia.js";
+        String expectedContentType = "text/javascript";
 
-        // Test results.js
-        _mockMvc.perform(get("/js/results.js"))
+        // Act & Assert
+        _mockMvc.perform(get(jsPath))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("text/javascript"));
+                .andExpect(content().contentType(expectedContentType));
+    }
+
+    @Test
+    void testResultsJsResource_IsAvailableWithCorrectContentType() throws Exception {
+        // Arrange
+        String jsPath = "/js/results.js";
+        String expectedContentType = "text/javascript";
+
+        // Act & Assert
+        _mockMvc.perform(get(jsPath))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(expectedContentType));
     }
 }

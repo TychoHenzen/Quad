@@ -1,7 +1,7 @@
 package com.quadexercise.quad.controller;
 
 import com.quadexercise.quad.dto.QuestionDTO;
-import com.quadexercise.quad.service.TriviaService;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ViewControllerTest {
 
     @Mock
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
 
     @Mock
     private Model _model;

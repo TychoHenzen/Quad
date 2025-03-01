@@ -5,14 +5,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("DuplicateStringLiteralInspection")
-class InterruptibleRunnableTest {
+class IInterruptibleRunnableTest {
 
     @SuppressWarnings("ConstantValue")
     @Test
     void testRun_ExecutesSuccessfully() throws InterruptedException {
         // Arrange
         boolean[] wasExecuted = {false};
-        InterruptibleRunnable runnable = () -> wasExecuted[0] = true;
+        IInterruptibleRunnable runnable = () -> wasExecuted[0] = true;
 
         // Act
         runnable.run();
@@ -24,7 +24,7 @@ class InterruptibleRunnableTest {
     @Test
     void testRun_PropagatesInterruptedException() {
         // Arrange
-        InterruptibleRunnable runnable = () -> {
+        IInterruptibleRunnable runnable = () -> {
             throw new InterruptedException("Test interruption");
         };
 
@@ -52,7 +52,7 @@ class InterruptibleRunnableTest {
     // Helper class for the functional context test
     private static class TestExecutor {
         @SuppressWarnings("MethodMayBeStatic")
-        void execute(InterruptibleRunnable action) throws InterruptedException {
+        void execute(IInterruptibleRunnable action) throws InterruptedException {
             action.run();
         }
     }

@@ -2,6 +2,6 @@ package com.quadexercise.quad.interfaces;
 
 
 @FunctionalInterface
-public interface InterruptibleRunnable {
+public interface IInterruptibleRunnable {
     void run() throws InterruptedException;
 }

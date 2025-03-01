@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadexercise.quad.dto.QuestionDTO;
 import com.quadexercise.quad.exceptions.TriviaParseException;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,13 +38,13 @@ class TriviaServiceQuestionParsingTest {
     @Mock
     private MessageService _messageService;
 
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
     private ObjectMapper _objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
-        _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
+        _triviaService = new TriviaServiceImpl(_restTemplateBuilder, _messageService);
     }
 
     @Test

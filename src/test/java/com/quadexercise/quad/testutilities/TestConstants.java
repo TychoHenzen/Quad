@@ -59,6 +59,7 @@ public enum TestConstants {
     public static final String TEXT_PLAIN_UTF8 = "text/plain;charset=UTF-8";
     public static final String RESPONSE_CODE_KEY = "response_code";
     public static final String EXPECTED_API_URL = "https://opentdb.com/api.php?amount=1";
+
     // Integration test constants
     public static final String HOME_TEMPLATE_NAME = "homeTemplate";
     public static final String HOME_EXPECTED_CONTENT = "Test your knowledge";
@@ -67,7 +68,7 @@ public enum TestConstants {
         return Arrays.asList("Carbon Dioxide", "Oxygen", "Hydrogen");
     }
 
-    public static List<String> TEST_ALL_ANSWERS() {
+    static List<String> TEST_ALL_ANSWERS() {
         return Arrays.asList(TEST_CORRECT_ANSWER, "Carbon Dioxide", "Oxygen", "Hydrogen");
     }
 }

@@ -1,13 +1,13 @@
 package com.quadexercise.quad.controller;
 
-import com.quadexercise.quad.constants.ApiConstants;
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
 import com.quadexercise.quad.dto.QuestionDTO;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
 import com.quadexercise.quad.exceptions.TriviaServiceException;
-import com.quadexercise.quad.service.TriviaService;
+import com.quadexercise.quad.interfaces.ITriviaService;
+import com.quadexercise.quad.utils.ApiConstants;
 import com.quadexercise.quad.utils.ResponseUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,9 +18,9 @@ import java.util.List;
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @RestController
 public class TriviaController {
-    private final TriviaService _triviaService;
+    private final ITriviaService _triviaService;
 
-    public TriviaController(TriviaService triviaService) {
+    public TriviaController(ITriviaService triviaService) {
         _triviaService = triviaService;
     }
 

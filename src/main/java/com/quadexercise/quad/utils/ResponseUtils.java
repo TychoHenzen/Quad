@@ -1,6 +1,5 @@
 package com.quadexercise.quad.utils;
 
-import com.quadexercise.quad.constants.ApiConstants;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 

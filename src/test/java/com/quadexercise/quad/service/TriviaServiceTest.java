@@ -1,5 +1,6 @@
 package com.quadexercise.quad.service;
 
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,13 +30,13 @@ class TriviaServiceTest {
     @Mock
     private MessageService _messageService;
 
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
 
 
     @BeforeEach
     void setUp() {
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
-        _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
+        _triviaService = new TriviaServiceImpl(_restTemplateBuilder, _messageService);
     }
 
     @Test

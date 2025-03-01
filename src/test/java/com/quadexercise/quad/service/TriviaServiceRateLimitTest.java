@@ -1,6 +1,7 @@
 package com.quadexercise.quad.service;
 
-import com.quadexercise.quad.interfaces.InterruptibleRunnable;
+import com.quadexercise.quad.interfaces.IInterruptibleRunnable;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,7 +34,7 @@ class TriviaServiceRateLimitTest {
     @Mock
     private MessageService _messageService;
 
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
 
 
     /**
@@ -46,7 +47,7 @@ class TriviaServiceRateLimitTest {
     /**
      * Helper method to measure execution time of a given action
      */
-    private static long measureExecutionTime(InterruptibleRunnable action) throws InterruptedException {
+    private static long measureExecutionTime(IInterruptibleRunnable action) throws InterruptedException {
         long start = System.currentTimeMillis();
         action.run();
         return System.currentTimeMillis() - start;
@@ -56,7 +57,7 @@ class TriviaServiceRateLimitTest {
     void setUp() {
         // Arrange
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
-        _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
+        _triviaService = new TriviaServiceImpl(_restTemplateBuilder, _messageService);
     }
 
     private void interruptThread(CountDownLatch threadStarted,
@@ -207,9 +208,9 @@ class TriviaServiceRateLimitTest {
 
         // Act
         testThread.start();
-        Thread.sleep(SMALL_DELAY_MS); // Give thread time to enter wait state
+        Thread.sleep(SMALL_DELAY_MS);
         testThread.interrupt();
-        testThread.join(LARGE_DELAY_MS); // Wait for thread to complete
+        testThread.join(LARGE_DELAY_MS);
 
         // Assert
         assertSame(Thread.State.TERMINATED, testThread.getState(), "Thread should have terminated");
@@ -218,27 +219,45 @@ class TriviaServiceRateLimitTest {
     @Test
     void testRateLimit_ControlledTimeMechanism() {
         // Arrange
-        TriviaService serviceSpy = spy(_triviaService);
+        TriviaRateLimitService realRateLimitService = new TriviaRateLimitService(_messageService);
+        TriviaRateLimitService rateLimitServiceSpy = spy(realRateLimitService);
 
-        // Mock current time to return controlled values
+        TriviaFetchService fetchServiceMock = mock(TriviaFetchService.class);
+        TriviaParsingService parsingServiceMock = mock(TriviaParsingService.class);
+        TriviaAnswerService answerServiceMock = mock(TriviaAnswerService.class);
+
+        ITriviaService triviaService = new TriviaServiceImpl(
+                fetchServiceMock,
+                parsingServiceMock,
+                answerServiceMock,
+                rateLimitServiceSpy,
+                _messageService
+        );
+
+        // Setup controlled time - return specific values in sequence
         AtomicLong currentTime = new AtomicLong(LARGE_DELAY_MS);
-        doAnswer(inv -> currentTime.get()).when(serviceSpy).getCurrentTimeMillis();
+        doReturn(currentTime.get()).when(rateLimitServiceSpy).getCurrentTimeMillis();
 
-        // Set up response
-        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn("{}");
+        // Setup fetch service to return empty response
+        when(fetchServiceMock.fetchTrivia(anyInt())).thenReturn("{}");
 
-        // First call - sets lastRequestTime
-        serviceSpy.getTrivia(1);
+        // Act - First call
+        triviaService.getTrivia(1);
 
-        // Advance time slightly (but less than rate limit)
+        // Advance the timer and update the spy
+        // Still within rate limit window
         currentTime.set(LARGE_DELAY_MS * 2L);
+        doReturn(currentTime.get()).when(rateLimitServiceSpy).getCurrentTimeMillis();
 
-        // Act
-        serviceSpy.getTrivia(1);
+        // Act - Second call (should trigger waiting)
+        triviaService.getTrivia(1);
 
         // Assert
-        verify(serviceSpy, atLeastOnce()).waitForRateLimit(eq(RATE_LIMIT_MS - LARGE_DELAY_MS), any());
+        // Verify waitForRateLimit was called with the expected parameters
+        verify(rateLimitServiceSpy, atLeastOnce())
+                .waitForRateLimit(eq(RATE_LIMIT_MS - LARGE_DELAY_MS), any());
     }
+
 
     @Test
     void testRateLimit_InterruptProcessing() throws InterruptedException {

@@ -2,7 +2,7 @@ package com.quadexercise.quad.integration;
 
 import com.quadexercise.quad.Application;
 import com.quadexercise.quad.controller.TriviaController;
-import com.quadexercise.quad.service.TriviaService;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -33,7 +33,7 @@ class QuadApplicationIntegrationTest {
 
         // Act & Assert
         assertNotNull(_applicationContext, "Application context should not be null");
-        assertNotNull(_applicationContext.getBean(TriviaService.class), "TriviaService should be loaded");
+        assertNotNull(_applicationContext.getBean(ITriviaService.class), "TriviaService should be loaded");
         assertNotNull(_applicationContext.getBean(TriviaController.class), "TriviaController should be loaded");
     }
 

@@ -7,7 +7,7 @@ import com.quadexercise.quad.dto.QuestionDTO;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
 import com.quadexercise.quad.exceptions.TriviaServiceException;
-import com.quadexercise.quad.service.TriviaService;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TriviaControllerTest {
 
     @Mock
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
 
     @InjectMocks
     private TriviaController _triviaController;

@@ -4,6 +4,7 @@ import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
 import com.quadexercise.quad.dto.QuestionDTO;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,14 +38,14 @@ class TriviaServiceAnswerCheckingTest {
     @Mock
     private MessageService _messageService;
 
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
     private String _validQuestionId;
 
     @BeforeEach
     void setUp() {
         // Arrange - Common setup for all tests
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
-        _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
+        _triviaService = new TriviaServiceImpl(_restTemplateBuilder, _messageService);
 
         // Set up test data for questions
 

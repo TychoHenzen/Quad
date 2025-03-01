@@ -3,6 +3,7 @@ package com.quadexercise.quad.service;
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,12 +35,12 @@ class TriviaServiceTestRequestsTest {
     @Mock
     private MessageService _messageService;
 
-    private TriviaService _triviaService;
+    private ITriviaService _triviaService;
 
     @BeforeEach
     void setUp() {
         when(_restTemplateBuilder.build()).thenReturn(_restTemplate);
-        _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
+        _triviaService = new TriviaServiceImpl(_restTemplateBuilder, _messageService);
     }
 
     @Test
@@ -191,9 +192,9 @@ class TriviaServiceTestRequestsTest {
 
         // Act - start the thread and interrupt it during waiting
         testThread.start();
-        Thread.sleep(SMALL_DELAY_MS); // Give the thread time to enter the wait state
+        Thread.sleep(SMALL_DELAY_MS); 
         testThread.interrupt();
-        testThread.join(LARGE_DELAY_MS); // Wait for thread to complete
+        testThread.join(LARGE_DELAY_MS); 
 
         // Assert
         assertFalse(testThread.isAlive(), "Thread should have terminated");
@@ -202,19 +203,38 @@ class TriviaServiceTestRequestsTest {
     @Test
     void testRateLimit_EnforcesWaitingTime() {
         // Arrange
-        TriviaService serviceSpy = spy(_triviaService);
+        TriviaRateLimitService realRateLimitService = new TriviaRateLimitService(_messageService);
+        TriviaRateLimitService rateLimitServiceSpy = spy(realRateLimitService);
+
+        TriviaFetchService fetchServiceMock = mock(TriviaFetchService.class);
+        TriviaParsingService parsingServiceMock = mock(TriviaParsingService.class);
+        TriviaAnswerService answerServiceMock = mock(TriviaAnswerService.class);
+
+        ITriviaService triviaService = new TriviaServiceImpl(
+                fetchServiceMock,
+                parsingServiceMock,
+                answerServiceMock,
+                rateLimitServiceSpy,
+                _messageService
+        );
+
         AtomicLong currentTime = new AtomicLong(LARGE_DELAY_MS);
-        doAnswer(inv -> currentTime.get()).when(serviceSpy).getCurrentTimeMillis();
+        doReturn(currentTime.get()).when(rateLimitServiceSpy).getCurrentTimeMillis();
 
-        when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(EMPTY_JSON_RESPONSE);
+        // Setup fetch service to return empty response
+        when(fetchServiceMock.fetchTrivia(anyInt())).thenReturn(EMPTY_JSON_RESPONSE);
 
-        // Act
-        serviceSpy.getTrivia(1); // First call - sets lastRequestTime
-        currentTime.set(LARGE_DELAY_MS * 2L); // Advance time slightly
-        serviceSpy.getTrivia(1); // Second call - should wait
+        // Act - First call
+        triviaService.getTrivia(1);
+
+        currentTime.set(LARGE_DELAY_MS * 2L);
+        doReturn(currentTime.get()).when(rateLimitServiceSpy).getCurrentTimeMillis();
+
+        // Act - Second call
+        triviaService.getTrivia(1);
 
         // Assert
-        verify(serviceSpy, atLeastOnce()).waitForRateLimit(anyLong(), any());
+        verify(rateLimitServiceSpy, atLeastOnce()).waitForRateLimit(anyLong(), any());
     }
 
     // Helper methods

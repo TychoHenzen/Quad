@@ -1,6 +1,6 @@
 package com.quadexercise.quad.controller;
 
-import com.quadexercise.quad.service.TriviaService;
+import com.quadexercise.quad.interfaces.ITriviaService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,9 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 @Controller
 public class ViewController {
 
-    private final TriviaService _triviaService;
+    private final ITriviaService _triviaService;
 
-    public ViewController(TriviaService triviaService) {
+    public ViewController(ITriviaService triviaService) {
         _triviaService = triviaService;
     }
 

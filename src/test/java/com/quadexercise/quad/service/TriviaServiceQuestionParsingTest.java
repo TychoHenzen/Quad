@@ -17,11 +17,13 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
+
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceQuestionParsingTest {
@@ -44,20 +46,11 @@ class TriviaServiceQuestionParsingTest {
         _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
     }
 
-    private static String getValidQuestionJson() {
-        return "{\"response_code\":0,\"results\":[" +
-                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
-                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
-                "]}";
-    }
-
     @Test
     void testGetQuestionsFromValidJson_ShouldReturnParsedQuestions() {
         // Arrange
-        String jsonResponse = getValidQuestionJson();
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn(jsonResponse);
+                .thenReturn(VALID_QUESTION_JSON);
 
         // Act
         List<QuestionDTO> result = _triviaService.getQuestions(1);
@@ -65,15 +58,15 @@ class TriviaServiceQuestionParsingTest {
         // Assert
         assertEquals(1, result.size());
         QuestionDTO question = result.get(0);
-        assertEquals("Science", question.getCategory());
-        assertEquals("multiple", question.getType());
-        assertEquals("medium", question.getDifficulty());
-        assertEquals("What is H2O?", question.getQuestion());
+        assertEquals(TEST_CATEGORY, question.getCategory());
+        assertEquals(TEST_TYPE, question.getType());
+        assertEquals(TEST_DIFFICULTY, question.getDifficulty());
+        assertEquals(TEST_QUESTION, question.getQuestion());
         assertEquals(4, question.getAnswers().size());
-        assertTrue(question.getAnswers().contains("Water"));
-        assertTrue(question.getAnswers().contains("Carbon Dioxide"));
-        assertTrue(question.getAnswers().contains("Oxygen"));
-        assertTrue(question.getAnswers().contains("Hydrogen"));
+        assertTrue(question.getAnswers().contains(TEST_CORRECT_ANSWER));
+        for (String answer : TEST_INCORRECT_ANSWERS()) {
+            assertTrue(question.getAnswers().contains(answer));
+        }
     }
 
     @Test
@@ -130,10 +123,9 @@ class TriviaServiceQuestionParsingTest {
     void testValidateMissingRequiredFields_ShouldThrowTriviaParseException
             (String fieldToRemove) throws JsonProcessingException {
         // Arrange
-        String baseJson = getValidQuestionJson();
 
         // Parse the base JSON and modify to remove specified field
-        JsonNode rootNode = _objectMapper.readTree(baseJson);
+        JsonNode rootNode = _objectMapper.readTree(VALID_QUESTION_JSON);
         JsonNode resultNode = rootNode.get("results").get(0);
         ((com.fasterxml.jackson.databind.node.ObjectNode) resultNode).remove(fieldToRemove);
 

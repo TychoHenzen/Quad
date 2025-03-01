@@ -2,15 +2,11 @@ package com.quadexercise.quad.exceptions;
 
 import org.junit.jupiter.api.Test;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 class ExceptionTest {
-    // Constants for frequently used test values
-    private static final String TEST_QUESTION_ID = "test-id-123";
-    private static final String PARSE_ERROR_MESSAGE = "Error parsing trivia data";
-    private static final String SERVICE_ERROR_MESSAGE = "Service error occurred";
-    private static final String ORIGINAL_ERROR = "Original error";
 
     @Test
     void testQuestionNotFoundException_CreatesCorrectException() {

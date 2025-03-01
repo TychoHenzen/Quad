@@ -2,27 +2,24 @@ package com.quadexercise.quad.model;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.List;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings("DuplicateStringLiteralInspection")
 class TriviaQuestionTest {
 
-    private static final String CORRECT_ANSWER = "Paris";
-    private static final String[] INCORRECT_ANSWERS = {"London", "Berlin", "Madrid"};
 
     @Test
     void testTriviaQuestion_GettersAndSetters() {
         // Arrange
         TriviaQuestion question = new TriviaQuestion();
-        String category = "Science";
-        String type = "multiple";
-        String difficulty = "medium";
-        String questionText = "What is the capital of France?";
-        String correctAnswer = CORRECT_ANSWER;
-        List<String> incorrectAnswers = Arrays.asList(INCORRECT_ANSWERS);
+        String category = TEST_CATEGORY;
+        String type = TEST_TYPE;
+        String difficulty = TEST_DIFFICULTY;
+        String questionText = TEST_QUESTION;
+        String correctAnswer = TEST_CORRECT_ANSWER;
+        List<String> incorrectAnswers = TEST_INCORRECT_ANSWERS();
 
         // Act
         question.setCategory(category);
@@ -61,7 +58,7 @@ class TriviaQuestionTest {
     void testTriviaQuestion_IncorrectAnswersImmutability() {
         // Arrange
         TriviaQuestion question = new TriviaQuestion();
-        List<String> incorrectAnswers = Arrays.asList(INCORRECT_ANSWERS);
+        List<String> incorrectAnswers = TEST_INCORRECT_ANSWERS();
         question.setIncorrectAnswers(incorrectAnswers);
 
         // Act
@@ -69,7 +66,7 @@ class TriviaQuestionTest {
 
         // Assert
         assertThrows(UnsupportedOperationException.class, () ->
-                        returnedList.add(CORRECT_ANSWER),
+                        returnedList.add(TEST_CORRECT_ANSWER),
                 "Returned list should be immutable and throw exception when modified"
         );
     }

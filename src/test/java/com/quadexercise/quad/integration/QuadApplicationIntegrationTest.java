@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -17,13 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = Application.class)
 @AutoConfigureMockMvc
-@SuppressWarnings("DuplicateStringLiteralInspection")
 class QuadApplicationIntegrationTest {
-
-    private static final String HOME_TEMPLATE_NAME = "homeTemplate";
-    private static final String HOME_EXPECTED_CONTENT = "Test your knowledge";
-    private static final String RESPONSE_CODE_KEY = "response_code";
-    private static final String TEXT_PLAIN_UTF8 = "text/plain;charset=UTF-8";
 
     @Autowired
     private MockMvc _mockMvc;

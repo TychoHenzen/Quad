@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.quadexercise.quad.service.TriviaService.RATE_LIMIT_MS;
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,7 +24,6 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceRateLimitTest {
 
-    private static final String EMPTY_JSON_RESPONSE = "{}";
     @Mock
     private RestTemplate _restTemplate;
 
@@ -36,9 +35,6 @@ class TriviaServiceRateLimitTest {
 
     private TriviaService _triviaService;
 
-    // Constants for time delays
-    private static final long SMALL_DELAY_MS = 100L;
-    private static final long LARGE_DELAY_MS = 1000L;
 
     /**
      * Helper method to wait until the rate limit period expires

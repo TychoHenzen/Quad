@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static com.quadexercise.quad.service.TriviaService.RATE_LIMIT_MS;
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,10 +24,6 @@ import static org.mockito.Mockito.*;
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class TriviaServiceTestRequestsTest {
-
-    private static final long SMALL_DELAY_MS = 100L;
-    private static final long LARGE_DELAY_MS = 1000L;
-    private static final String EMPTY_JSON_RESPONSE = "{}";
 
     @Mock
     private RestTemplate _restTemplate;
@@ -248,7 +244,7 @@ class TriviaServiceTestRequestsTest {
         reset(_restTemplate, _messageService);
 
         // Use lenient stubbing for both mocks
-        lenient().when(_messageService.getMessage(anyString())).thenReturn("Test message");
+        lenient().when(_messageService.getMessage(anyString())).thenReturn(TEST_MESSAGE);
         lenient().when(_restTemplate.getForObject(anyString(), eq(String.class))).thenReturn(invalidJson);
     }
 }

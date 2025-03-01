@@ -12,9 +12,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.ui.Model;
 
-import java.util.Arrays;
 import java.util.List;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testUtils.TestDataFactory.createMockQuestions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,15 +25,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @ExtendWith(MockitoExtension.class)
 class ViewControllerTest {
-    // Constants
-    private static final String HOME_PATH = "/";
-    private static final String PLAY_PATH = "/play";
-    private static final String RESULTS_PATH = "/results";
-    private static final String HOME_TEMPLATE = "homeTemplate";
-    private static final String TRIVIA_TEMPLATE = "triviaTemplate";
-    private static final String RESULTS_TEMPLATE = "resultsTemplate";
-    private static final String QUESTIONS_ATTR = "questions";
-    private static final int DEFAULT_QUESTION_AMOUNT = 5;
 
     @Mock
     private TriviaService _triviaService;
@@ -52,21 +44,6 @@ class ViewControllerTest {
                 .build();
     }
 
-    private static List<QuestionDTO> createMockQuestions() {
-        QuestionDTO question1 = new QuestionDTO();
-        question1.setCategory("Science");
-        question1.setQuestion("What is H2O?");
-        question1.setDifficulty("easy");
-        question1.setAnswers(Arrays.asList("Water", "Carbon Dioxide", "Oxygen", "Hydrogen"));
-
-        QuestionDTO question2 = new QuestionDTO();
-        question2.setCategory("History");
-        question2.setQuestion("Who was the first president of the United States?");
-        question2.setDifficulty("medium");
-        question2.setAnswers(Arrays.asList("George Washington", "Thomas Jefferson", "Abraham Lincoln", "John Adams"));
-
-        return Arrays.asList(question1, question2);
-    }
 
     @Test
     void testHomeEndpoint_ReturnsHomeTemplate() throws Exception {

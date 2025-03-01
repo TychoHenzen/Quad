@@ -1,14 +1,14 @@
 package com.quadexercise.quad.controller;
 
+import com.quadexercise.quad.constants.ApiConstants;
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
 import com.quadexercise.quad.dto.QuestionDTO;
-import com.quadexercise.quad.enums.Errors;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
 import com.quadexercise.quad.exceptions.TriviaServiceException;
 import com.quadexercise.quad.service.TriviaService;
-import org.springframework.http.HttpStatus;
+import com.quadexercise.quad.utils.ResponseUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,43 +24,34 @@ public class TriviaController {
         _triviaService = triviaService;
     }
 
-    private static ResponseEntity<Object> createUnavailableResponse() {
-        return ResponseEntity.status(Errors.ERR_UNAVAILABLE)
-                .body("{\"error\": \"Service temporarily unavailable\"}");
-    }
-
-    private static ResponseEntity<Object> createErrorResponse() {
-        return ResponseEntity.internalServerError()
-                .body("{\"error\": \"Failed to fetch trivia\"}");
-    }
-
-    @GetMapping(value = "/test", produces = MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8")
+    @GetMapping(value = "/test",
+            produces = MediaType.TEXT_PLAIN_VALUE +
+                    ApiConstants.CONTENT_TYPE_UTF8)
     public ResponseEntity<Object> testTrivia() {
         try {
             String response = _triviaService.getTrivia(1);
             return ResponseEntity.ok(response);
         } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
-            return createUnavailableResponse();
+            return ResponseUtils.createUnavailableResponse();
         } catch (RuntimeException e) {
-            return createErrorResponse();
+            return ResponseUtils.createErrorResponse();
         }
     }
 
     @GetMapping("/questions")
     public ResponseEntity<Object> getQuestions(
-            @RequestParam(name = "amount", defaultValue = "5") int amount) {
+            @RequestParam(name = ApiConstants.PARAM_AMOUNT, defaultValue = "5") int amount) {
         try {
             List<QuestionDTO> questions = _triviaService.getQuestions(amount);
             return ResponseEntity.ok(questions);
         } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
-            return createUnavailableResponse();
+            return ResponseUtils.createUnavailableResponse();
         } catch (TriviaParseException e) {
-            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                    .body("{\"error\": \"Error parsing trivia data from provider\"}");
+            return ResponseUtils.createBadGatewayResponse();
         } catch (RuntimeException e) {
-            return createErrorResponse();
+            return ResponseUtils.createErrorResponse();
         }
     }
 
@@ -70,17 +61,15 @@ public class TriviaController {
             List<AnswerResultDTO> results = _triviaService.checkAnswers(answers);
             return ResponseEntity.ok(results);
         } catch (QuestionNotFoundException e) {
-            String errorMsg = String.format(
-                    "{\"error\": \"Invalid question ID: %s\"}", e.getQuestionId());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMsg);
+            return ResponseUtils.createBadRequestResponse
+                    (String.format("Invalid question ID: %s", e.getQuestionId()));
         } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
-            return createUnavailableResponse();
+            return ResponseUtils.createUnavailableResponse();
         } catch (TriviaServiceException e) {
-            String errorMsg = String.format("{\"error\": \"%s\"}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorMsg);
+            return ResponseUtils.createServiceErrorResponse(e.getMessage());
         } catch (RuntimeException e) {
-            return createErrorResponse();
+            return ResponseUtils.createErrorResponse();
         }
     }
 }

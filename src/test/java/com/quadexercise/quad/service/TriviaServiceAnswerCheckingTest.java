@@ -17,6 +17,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static com.quadexercise.quad.testUtils.TestConstants.TEST_CORRECT_ANSWER;
+import static com.quadexercise.quad.testUtils.TestConstants.VALID_QUESTION_JSON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -36,7 +38,6 @@ class TriviaServiceAnswerCheckingTest {
     private MessageService _messageService;
 
     private TriviaService _triviaService;
-    private static final String CORRECT_ANSWER = "Water";
     private String _validQuestionId;
 
     @BeforeEach
@@ -46,14 +47,9 @@ class TriviaServiceAnswerCheckingTest {
         _triviaService = new TriviaService(_restTemplateBuilder, _messageService);
 
         // Set up test data for questions
-        String jsonResponse = "{\"response_code\":0,\"results\":[" +
-                "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
-                "\"question\":\"What is H2O?\",\"correct_answer\":\"" + CORRECT_ANSWER + "\"," +
-                "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
-                "]}";
 
         when(_restTemplate.getForObject(anyString(), eq(String.class)))
-                .thenReturn(jsonResponse);
+                .thenReturn(VALID_QUESTION_JSON);
 
         // Load questions to populate internal answer map
         List<QuestionDTO> questions = _triviaService.getQuestions(1);
@@ -65,14 +61,14 @@ class TriviaServiceAnswerCheckingTest {
         // Arrange
         AnswerDTO correctAnswer = new AnswerDTO();
         correctAnswer.setQuestionId(_validQuestionId);
-        correctAnswer.setSelectedAnswer(CORRECT_ANSWER);
+        correctAnswer.setSelectedAnswer(TEST_CORRECT_ANSWER);
 
         // Act
         AnswerResultDTO result = _triviaService.checkAnswer(correctAnswer);
 
         // Assert
         assertTrue(result.isCorrect());
-        assertEquals(CORRECT_ANSWER, result.getCorrectAnswer());
+        assertEquals(TEST_CORRECT_ANSWER, result.getCorrectAnswer());
         assertEquals(_validQuestionId, result.getQuestionId());
     }
 
@@ -88,7 +84,7 @@ class TriviaServiceAnswerCheckingTest {
 
         // Assert
         assertFalse(result.isCorrect());
-        assertEquals(CORRECT_ANSWER, result.getCorrectAnswer());
+        assertEquals(TEST_CORRECT_ANSWER, result.getCorrectAnswer());
         assertEquals(_validQuestionId, result.getQuestionId());
     }
 
@@ -97,7 +93,7 @@ class TriviaServiceAnswerCheckingTest {
         // Arrange
         AnswerDTO correctAnswer = new AnswerDTO();
         correctAnswer.setQuestionId(_validQuestionId);
-        correctAnswer.setSelectedAnswer(CORRECT_ANSWER);
+        correctAnswer.setSelectedAnswer(TEST_CORRECT_ANSWER);
 
         AnswerDTO incorrectAnswer = new AnswerDTO();
         incorrectAnswer.setQuestionId(_validQuestionId);
@@ -112,8 +108,8 @@ class TriviaServiceAnswerCheckingTest {
         assertEquals(2, results.size());
         assertTrue(results.get(0).isCorrect());
         assertFalse(results.get(1).isCorrect());
-        assertEquals(CORRECT_ANSWER, results.get(0).getCorrectAnswer());
-        assertEquals(CORRECT_ANSWER, results.get(1).getCorrectAnswer());
+        assertEquals(TEST_CORRECT_ANSWER, results.get(0).getCorrectAnswer());
+        assertEquals(TEST_CORRECT_ANSWER, results.get(1).getCorrectAnswer());
     }
 
     @Test

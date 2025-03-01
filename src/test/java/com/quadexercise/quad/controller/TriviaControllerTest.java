@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
 import com.quadexercise.quad.dto.QuestionDTO;
-import com.quadexercise.quad.enums.Errors;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
 import com.quadexercise.quad.exceptions.TriviaServiceException;
@@ -22,9 +21,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testUtils.TestDataFactory.*;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,10 +41,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(MockitoExtension.class)
 class TriviaControllerTest {
 
-    private static final String ERROR_SERVICE_UNAVAILABLE = "{\"error\": \"Service temporarily unavailable\"}";
-    private static final String ERROR_FETCH_TRIVIA = "{\"error\": \"Failed to fetch trivia\"}";
-    private static final String ERROR_PARSING_DATA = "{\"error\": \"Error parsing trivia data from provider\"}";
-
     @Mock
     private TriviaService _triviaService;
 
@@ -53,33 +49,6 @@ class TriviaControllerTest {
 
     private MockMvc _mockMvc;
     private ObjectMapper _objectMapper;
-
-    private static List<AnswerDTO> createTestAnswers() {
-        List<AnswerDTO> answers = new ArrayList<>(0);
-        AnswerDTO answer = new AnswerDTO();
-        answer.setQuestionId("q1");
-        answer.setSelectedAnswer("Paris");
-        answers.add(answer);
-        return answers;
-    }
-
-    // Helper methods
-
-    private static List<QuestionDTO> createMockQuestions() {
-        QuestionDTO question1 = new QuestionDTO();
-        question1.setCategory("Science");
-        question1.setQuestion("What is H2O?");
-        question1.setDifficulty("easy");
-        question1.setAnswers(Arrays.asList("Water", "Carbon Dioxide", "Oxygen", "Hydrogen"));
-
-        QuestionDTO question2 = new QuestionDTO();
-        question2.setCategory("History");
-        question2.setQuestion("Who was the first president of the United States?");
-        question2.setDifficulty("medium");
-        question2.setAnswers(Arrays.asList("George Washington", "Thomas Jefferson", "Abraham Lincoln", "John Adams"));
-
-        return Arrays.asList(question1, question2);
-    }
 
     @BeforeEach
     void setUp() {
@@ -121,7 +90,7 @@ class TriviaControllerTest {
 
         // Act & Assert
         _mockMvc.perform(get("/test"))
-                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
+                .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
                 .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
 
         // Verify thread interrupt status was set
@@ -186,7 +155,7 @@ class TriviaControllerTest {
 
         // Act & Assert
         _mockMvc.perform(get("/questions"))
-                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
+                .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
                 .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
 
         // Check thread interrupt status
@@ -215,12 +184,8 @@ class TriviaControllerTest {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
-        List<AnswerResultDTO> results = new ArrayList<>(0);
-        AnswerResultDTO result = new AnswerResultDTO();
-        result.setQuestionId("q1");
-        result.setCorrect(true);
-        result.setCorrectAnswer("Paris");
-        results.add(result);
+
+        List<AnswerResultDTO> results = createTestResults();
 
         when(_triviaService.checkAnswers(any())).thenReturn(results);
 
@@ -277,7 +242,7 @@ class TriviaControllerTest {
         _mockMvc.perform(post("/checkanswers")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(_objectMapper.writeValueAsString(answers)))
-                .andExpect(status().is(Errors.ERR_UNAVAILABLE))
+                .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
                 .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
 
         // Check thread interrupt status
@@ -305,12 +270,7 @@ class TriviaControllerTest {
         // Arrange
         List<AnswerDTO> answers = createTestAnswers();
 
-        List<AnswerResultDTO> results = new ArrayList<>(0);
-        AnswerResultDTO result = new AnswerResultDTO();
-        result.setQuestionId("q1");
-        result.setCorrect(true);
-        result.setCorrectAnswer("Paris");
-        results.add(result);
+        List<AnswerResultDTO> results = createTestResults();
 
         when(_triviaService.checkAnswers(any())).thenReturn(results);
 

@@ -10,6 +10,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 
 import java.util.Locale;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -19,10 +20,6 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MessageServiceTests {
 
-    private static final String TEST_KEY = "test.key";
-    private static final String TEST_KEY_WITH_ARGS = "test.key.with.args";
-    private static final String TEST_MESSAGE = "Test Message";
-    private static final String TEST_MESSAGE_WITH_ARGS = "Test Message with arg1 and arg2";
 
     @Mock
     private MessageSource _messageSource;

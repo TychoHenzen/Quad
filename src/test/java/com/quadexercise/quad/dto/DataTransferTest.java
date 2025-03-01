@@ -6,9 +6,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import static com.quadexercise.quad.testUtils.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-@SuppressWarnings("DuplicateStringLiteralInspection")
 class DataTransferTest {
 
     @Test
@@ -81,11 +81,11 @@ class DataTransferTest {
         // Arrange
         QuestionDTO questionDTO = new QuestionDTO();
         String id = "60aee2aa-80fa-4aa3-a916-8adad0f190b4";
-        String category = "Science";
-        String type = "multiple";
-        String difficulty = "medium";
-        String question = "What is H2O?";
-        List<String> answers = Arrays.asList("Water", "Carbon Dioxide", "Oxygen", "Hydrogen");
+        String category = TEST_CATEGORY;
+        String type = TEST_TYPE;
+        String difficulty = TEST_DIFFICULTY;
+        String question = TEST_QUESTION;
+        List<String> answers = TEST_INCORRECT_ANSWERS();
 
         // Act
         questionDTO.setId(id);

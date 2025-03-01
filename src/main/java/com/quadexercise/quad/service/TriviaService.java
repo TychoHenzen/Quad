@@ -1,16 +1,17 @@
 package com.quadexercise.quad.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.quadexercise.quad.constants.ApiConstants;
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
 import com.quadexercise.quad.dto.QuestionDTO;
 import com.quadexercise.quad.exceptions.QuestionNotFoundException;
 import com.quadexercise.quad.exceptions.TriviaParseException;
+import com.quadexercise.quad.utils.JsonValidator;
+import com.quadexercise.quad.utils.TriviaDtoMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,10 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.StreamSupport;
 
+
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @Service
 public class TriviaService {
-    public static final long RATE_LIMIT_MS = 5000L;
 
     private final RestTemplate _restTemplate;
     private final ObjectMapper _objectMapper;
@@ -41,30 +42,13 @@ public class TriviaService {
         _messageService = messageService;
     }
 
-    private static void validateField(TreeNode node, String value) {
-        if (node.get(value) == null) {
-            throw new TriviaParseException(
-                    String.format("Missing required field (%s) in trivia question", value));
-        }
-    }
-
-    private static void validateResultNode(TreeNode node) {
-        // Check for required fields existence
-        validateField(node, "category");
-        validateField(node, "type");
-        validateField(node, "difficulty");
-        validateField(node, "question");
-        validateField(node, "correct_answer");
-        validateField(node, "incorrect_answers");
-    }
-
-    protected List<String> shuffleAnswers(List<String> answers) {
-        List<String> shuffled = new ArrayList<>(answers);
-        Collections.shuffle(shuffled);
-        return shuffled;
-    }
-
-    protected long getCurrentTimeMillis() {
+    /**
+     * Gets the current system time in milliseconds.
+     * Extracted to facilitate testing with mocks.
+     *
+     * @return Current time in milliseconds
+     */
+    public long getCurrentTimeMillis() {
         return System.currentTimeMillis();
     }
 
@@ -72,9 +56,9 @@ public class TriviaService {
         UriComponentsBuilder builder = UriComponentsBuilder
                 .newInstance()
                 .scheme("https")
-                .host("opentdb.com")
-                .path("/api.php")
-                .queryParam("amount", amount);
+                .host(ApiConstants.TRIVIA_API_HOST)
+                .path(ApiConstants.TRIVIA_API_PATH)
+                .queryParam(ApiConstants.PARAM_AMOUNT, amount);
 
         return _restTemplate.getForObject(
                 builder.toUriString(),
@@ -104,55 +88,16 @@ public class TriviaService {
         try {
             JsonNode root = _objectMapper.readTree(response);
             JsonNode results = root.get("results");
-            if (results instanceof ArrayNode) {
-                return StreamSupport.stream(results.spliterator(), false)
-                        .map(this::createQuestionDtoFromNode)
-                        .toList();
-            }
-            throw new TriviaParseException("required field (results) not found in trivia response");
+            JsonValidator.validateTriviaResponse(results);
+            return StreamSupport.stream(results.spliterator(), false)
+                    .map(jsonNode -> TriviaDtoMapper
+                            .createQuestionDtoFromNode(jsonNode, _questionAnswers))
+                    .toList();
         } catch (JsonMappingException e) {
             throw new TriviaParseException("Error mapping trivia JSON", e);
         } catch (JsonProcessingException e) {
             throw new TriviaParseException("Failed to parse trivia response", e);
         }
-    }
-
-    private QuestionDTO createQuestionDtoFromNode(JsonNode resultNode) {
-
-        validateResultNode(resultNode);
-
-        QuestionDTO questionDTO = new QuestionDTO();
-
-        // Set question properties
-        questionDTO.setCategory(resultNode.get("category").asText());
-        questionDTO.setType(resultNode.get("type").asText());
-        questionDTO.setDifficulty(resultNode.get("difficulty").asText());
-        questionDTO.setQuestion(resultNode.get("question").asText());
-
-        // Get correct answer
-        String correctAnswer = resultNode.get("correct_answer").asText();
-
-        // Prepare all answers
-
-        // Get incorrect answers
-        JsonNode incorrectAnswersNode = resultNode.get("incorrect_answers");
-        List<String> incorrectAnswers = StreamSupport
-                .stream(incorrectAnswersNode.spliterator(), false)
-                .map(JsonNode::asText)
-                .toList();
-
-        // Add all answers and shuffle
-        List<String> allAnswers = new ArrayList<>(incorrectAnswers);
-        allAnswers.add(correctAnswer);
-        allAnswers = shuffleAnswers(allAnswers);
-
-
-        questionDTO.setAnswers(allAnswers);
-
-        // Store the correct answer mapped to the question ID
-        _questionAnswers.put(questionDTO.getId(), correctAnswer);
-
-        return questionDTO;
     }
 
     public List<AnswerResultDTO> checkAnswers(Collection<? extends AnswerDTO> answers) {
@@ -185,7 +130,7 @@ public class TriviaService {
         synchronized (this) {
             long currentTime = getCurrentTimeMillis();
             long elapsed = currentTime - _lastRequestTime;
-            long millisecondsToWait = RATE_LIMIT_MS - elapsed;
+            long millisecondsToWait = ApiConstants.RATE_LIMIT_MS - elapsed;
 
             if (millisecondsToWait > 0L) {
                 waitForRateLimit(millisecondsToWait, currentThread);

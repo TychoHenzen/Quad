@@ -17,8 +17,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static com.quadexercise.quad.testUtils.TestConstants.TEST_CORRECT_ANSWER;
-import static com.quadexercise.quad.testUtils.TestConstants.VALID_QUESTION_JSON;
+import static com.quadexercise.quad.testutilities.TestConstants.TEST_CORRECT_ANSWER;
+import static com.quadexercise.quad.testutilities.TestConstants.VALID_QUESTION_JSON;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;

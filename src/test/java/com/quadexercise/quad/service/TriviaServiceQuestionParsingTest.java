@@ -17,7 +17,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;

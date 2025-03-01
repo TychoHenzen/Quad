@@ -23,8 +23,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.quadexercise.quad.testUtils.TestConstants.*;
-import static com.quadexercise.quad.testUtils.TestDataFactory.*;
+import static com.quadexercise.quad.testutilities.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestDataFactory.*;
 import static java.lang.Thread.interrupted;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;

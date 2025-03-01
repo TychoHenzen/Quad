@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DataTransferTest {

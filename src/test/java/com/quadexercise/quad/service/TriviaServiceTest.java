@@ -9,8 +9,8 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import static com.quadexercise.quad.testUtils.TestConstants.EMPTY_RESPONSE;
-import static com.quadexercise.quad.testUtils.TestConstants.EXPECTED_API_URL;
+import static com.quadexercise.quad.testutilities.TestConstants.EMPTY_RESPONSE;
+import static com.quadexercise.quad.testutilities.TestConstants.EXPECTED_API_URL;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;

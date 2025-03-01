@@ -2,7 +2,7 @@ package com.quadexercise.quad.exceptions;
 
 import org.junit.jupiter.api.Test;
 
-import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestConstants.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 

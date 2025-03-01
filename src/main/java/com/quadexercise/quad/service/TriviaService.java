@@ -87,8 +87,8 @@ public class TriviaService {
     private List<QuestionDTO> parseQuestionsFromResponse(String response) {
         try {
             JsonNode root = _objectMapper.readTree(response);
+            JsonValidator.validateTriviaResponse(root);
             JsonNode results = root.get("results");
-            JsonValidator.validateTriviaResponse(results);
             return StreamSupport.stream(results.spliterator(), false)
                     .map(jsonNode -> TriviaDtoMapper
                             .createQuestionDtoFromNode(jsonNode, _questionAnswers))

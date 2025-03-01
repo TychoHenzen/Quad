@@ -1,4 +1,4 @@
-package com.quadexercise.quad.testUtils;
+package com.quadexercise.quad.testutilities;
 
 import java.util.Arrays;
 import java.util.List;
@@ -44,11 +44,13 @@ public enum TestConstants {
     public static final String TEST_MESSAGE_WITH_ARGS = "Test Message with arg1 and arg2";
     // Test JSON responses
     public static final String EMPTY_JSON_RESPONSE = "{}";
+    public static final String EMPTY_RESPONSE = "{\"response_code\":0,\"results\":[]}";
     public static final String VALID_QUESTION_JSON = "{\"response_code\":0,\"results\":[" +
             "{\"category\":\"Science\",\"type\":\"multiple\",\"difficulty\":\"medium\"," +
             "\"question\":\"What is H2O?\",\"correct_answer\":\"Water\"," +
             "\"incorrect_answers\":[\"Carbon Dioxide\",\"Oxygen\",\"Hydrogen\"]}" +
             "]}";
+
     // Constants for time-related testing
     public static final long SMALL_DELAY_MS = 100L;
     public static final long LARGE_DELAY_MS = 1000L;
@@ -57,12 +59,15 @@ public enum TestConstants {
     public static final String TEXT_PLAIN_UTF8 = "text/plain;charset=UTF-8";
     public static final String RESPONSE_CODE_KEY = "response_code";
     public static final String EXPECTED_API_URL = "https://opentdb.com/api.php?amount=1";
-    public static final String EMPTY_RESPONSE = "{\"response_code\":0,\"results\":[]}";
     // Integration test constants
     public static final String HOME_TEMPLATE_NAME = "homeTemplate";
     public static final String HOME_EXPECTED_CONTENT = "Test your knowledge";
 
     public static List<String> TEST_INCORRECT_ANSWERS() {
         return Arrays.asList("Carbon Dioxide", "Oxygen", "Hydrogen");
+    }
+
+    public static List<String> TEST_ALL_ANSWERS() {
+        return Arrays.asList(TEST_CORRECT_ANSWER, "Carbon Dioxide", "Oxygen", "Hydrogen");
     }
 }

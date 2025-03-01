@@ -1,4 +1,4 @@
-package com.quadexercise.quad.testUtils;
+package com.quadexercise.quad.testutilities;
 
 import com.quadexercise.quad.dto.AnswerDTO;
 import com.quadexercise.quad.dto.AnswerResultDTO;
@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.quadexercise.quad.testUtils.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestConstants.*;
 
 /**
  * Factory class for creating test data objects.
@@ -28,8 +28,7 @@ public enum TestDataFactory {
         question1.setCategory(TEST_CATEGORY);
         question1.setQuestion(TEST_QUESTION);
         question1.setDifficulty(TEST_DIFFICULTY);
-        List<String> answersStrings = TEST_INCORRECT_ANSWERS();
-        answersStrings.add(TEST_CORRECT_ANSWER);
+        List<String> answersStrings = TEST_ALL_ANSWERS();
         question1.setAnswers(answersStrings);
 
         QuestionDTO question2 = new QuestionDTO();

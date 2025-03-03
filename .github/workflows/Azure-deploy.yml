@@ -12,8 +12,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      jar-name: ${{ steps.find-jar.outputs.jar-name }}
     permissions:
       contents: read #This is required for actions/checkout
 
@@ -39,19 +37,14 @@ jobs:
           mkdir -p src/main/resources/static/js
           tsc --project tsconfig.json
 
-      - name: Find executable JAR
-        id: find-jar
-        run: |
-          EXECUTABLE_JAR=$(find ${{ github.workspace }}/build/libs/ -name "*.jar" -not -name "*-plain.jar" -type f | head -n 1)
-          echo "Executable JAR found: $EXECUTABLE_JAR"
-          echo "jar-path=$EXECUTABLE_JAR" >> $GITHUB_OUTPUT
-          echo "jar-name=$(basename $EXECUTABLE_JAR)" >> $GITHUB_OUTPUT
+      - name: Build with Gradle (skip tests for deployment)
+        run: ./gradlew build -x test
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: java-app
-          path: ${{ steps.find-jar.outputs.jar-path }}
+          path: '${{ github.workspace }}/build/libs/Quad-0.0.1-SNAPSHOT.jar'
 
   deploy:
     runs-on: ubuntu-latest
@@ -65,11 +58,9 @@ jobs:
     
     steps:
       - name: Download artifact from build job
-        id: download-artifact
         uses: actions/download-artifact@v4
         with:
           name: java-app
-          path: downloaded-jar
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -78,14 +69,10 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_7EEF3DB8C30B460E825AAC417A3593FA }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F566BAE5D24F45429E85FCE340050679 }}
 
-      - name: List downloaded files
-        run: ls -la downloaded-jar
-
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'Quad-trivia'
           slot-name: 'Production'
-          package: '*.jar'
-          
+          package: 'Quad-0.0.1-SNAPSHOT.jar'

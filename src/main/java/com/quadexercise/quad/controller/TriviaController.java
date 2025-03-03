@@ -8,12 +8,12 @@ import com.quadexercise.quad.exceptions.TriviaParseException;
 import com.quadexercise.quad.exceptions.TriviaServiceException;
 import com.quadexercise.quad.interfaces.ITriviaService;
 import com.quadexercise.quad.utils.ApiConstants;
-import com.quadexercise.quad.utils.ResponseUtils;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static com.quadexercise.quad.utils.ResponseUtils.*;
 
 @SuppressWarnings("DuplicateStringLiteralInspection")
 @RestController
@@ -24,21 +24,6 @@ public class TriviaController {
         _triviaService = triviaService;
     }
 
-    @GetMapping(value = "/test",
-            produces = MediaType.TEXT_PLAIN_VALUE +
-                    ApiConstants.CONTENT_TYPE_UTF8)
-    public ResponseEntity<Object> testTrivia() {
-        try {
-            String response = _triviaService.getTrivia(1);
-            return ResponseEntity.ok(response);
-        } catch (IllegalStateException e) {
-            Thread.currentThread().interrupt();
-            return ResponseUtils.createUnavailableResponse();
-        } catch (RuntimeException e) {
-            return ResponseUtils.createErrorResponse();
-        }
-    }
-
     @GetMapping("/questions")
     public ResponseEntity<Object> getQuestions(
             @RequestParam(name = ApiConstants.PARAM_AMOUNT, defaultValue = "5") int amount) {
@@ -47,11 +32,11 @@ public class TriviaController {
             return ResponseEntity.ok(questions);
         } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
-            return ResponseUtils.createUnavailableResponse();
+            return createUnavailableResponse();
         } catch (TriviaParseException e) {
-            return ResponseUtils.createBadGatewayResponse();
+            return createBadGatewayResponse();
         } catch (RuntimeException e) {
-            return ResponseUtils.createErrorResponse();
+            return createErrorResponse();
         }
     }
 
@@ -61,15 +46,15 @@ public class TriviaController {
             List<AnswerResultDTO> results = _triviaService.checkAnswers(answers);
             return ResponseEntity.ok(results);
         } catch (QuestionNotFoundException e) {
-            return ResponseUtils.createBadRequestResponse
+            return createBadRequestResponse
                     (String.format("Invalid question ID: %s", e.getQuestionId()));
         } catch (IllegalStateException e) {
             Thread.currentThread().interrupt();
-            return ResponseUtils.createUnavailableResponse();
+            return createUnavailableResponse();
         } catch (TriviaServiceException e) {
-            return ResponseUtils.createServiceErrorResponse(e.getMessage());
+            return createServiceErrorResponse(e.getMessage());
         } catch (RuntimeException e) {
-            return ResponseUtils.createErrorResponse();
+            return createErrorResponse();
         }
     }
 }

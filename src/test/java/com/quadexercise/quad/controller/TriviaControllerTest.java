@@ -58,47 +58,6 @@ class TriviaControllerTest {
         _objectMapper = new ObjectMapper();
     }
 
-    // Test endpoint tests
-
-    @Test
-    void testTriviaEndpoint_ReturnsData() throws Exception {
-        // Arrange
-        String expectedResponse = "{\"response_code\":0,\"results\":[]}";
-        when(_triviaService.getTrivia(1)).thenReturn(expectedResponse);
-
-        // Act & Assert
-        _mockMvc.perform(get("/test"))
-                .andExpect(status().isOk())
-                .andExpect(content().string(expectedResponse));
-    }
-
-    @Test
-    void testTriviaEndpoint_HandlesServiceError() throws Exception {
-        // Arrange
-        when(_triviaService.getTrivia(1)).thenThrow(new RuntimeException("Service Error"));
-
-        // Act & Assert
-        _mockMvc.perform(get("/test"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(content().json(ERROR_FETCH_TRIVIA));
-    }
-
-    @Test
-    void testTriviaEndpoint_HandlesInterruption() throws Exception {
-        // Arrange
-        when(_triviaService.getTrivia(1)).thenThrow(new IllegalStateException("Test interrupt"));
-
-        // Act & Assert
-        _mockMvc.perform(get("/test"))
-                .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
-                .andExpect(content().json(ERROR_SERVICE_UNAVAILABLE));
-
-        // Verify thread interrupt status was set
-        assertTrue(Thread.currentThread().isInterrupted());
-        // Clear interrupted status for other tests
-        assertTrue(interrupted());
-    }
-
     // Questions endpoint tests
 
     @Test

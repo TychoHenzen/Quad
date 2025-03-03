@@ -10,7 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static com.quadexercise.quad.testutilities.TestConstants.*;
+import static com.quadexercise.quad.testutilities.TestConstants.HOME_EXPECTED_CONTENT;
+import static com.quadexercise.quad.testutilities.TestConstants.HOME_TEMPLATE_NAME;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,15 +50,4 @@ class QuadApplicationIntegrationTest {
                 .andExpect(content().string(containsString(HOME_EXPECTED_CONTENT)));
     }
 
-    @Test
-    void testTriviaEndpointReturnsValidJson() throws Exception {
-        // Arrange
-        // MockMvc is autowired
-
-        // Act & Assert (combined in Spring MVC testing)
-        _mockMvc.perform(get("/test"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(TEXT_PLAIN_UTF8))
-                .andExpect(content().string(containsString(RESPONSE_CODE_KEY)));
-    }
 }
